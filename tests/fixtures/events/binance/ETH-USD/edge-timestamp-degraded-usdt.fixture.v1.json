@@ -1,0 +1,43 @@
+{
+  "fixtureVersion": "v1",
+  "id": "binance-eth-usdt-edge-timestamp-degraded",
+  "family": "events",
+  "category": "edge-timestamp-degraded",
+  "scenarioClass": "edge-case",
+  "venue": "BINANCE",
+  "symbol": "ETH-USD",
+  "sourceSymbol": "ETHUSDT",
+  "quoteCurrency": "USDT",
+  "targetSchema": "market-trade.v1.schema.json",
+  "purpose": "Exercise fallback to recvTs when exchangeTs is implausible.",
+  "checks": [
+    "schema-validation",
+    "timestamp-degradation"
+  ],
+  "rawMessages": [
+    {
+      "type": "trade",
+      "tradeId": "2010",
+      "price": "3501.20",
+      "size": "0.80",
+      "side": "sell",
+      "exchangeTs": "1970-01-01T00:00:00Z",
+      "recvTs": "2026-03-06T12:02:20.030Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "market-trade",
+      "symbol": "ETH-USD",
+      "sourceSymbol": "ETHUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BINANCE",
+      "marketType": "spot",
+      "exchangeTs": "1970-01-01T00:00:00Z",
+      "recvTs": "2026-03-06T12:02:20.030Z",
+      "timestampStatus": "degraded",
+      "sourceRecordId": "trade:2010"
+    }
+  ]
+}

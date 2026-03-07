@@ -1,0 +1,43 @@
+{
+  "fixtureVersion": "v1",
+  "id": "bybit-btc-usdt-happy-liquidation",
+  "family": "events",
+  "category": "happy-liquidation",
+  "scenarioClass": "happy-path",
+  "venue": "BYBIT",
+  "symbol": "BTC-USD",
+  "sourceSymbol": "BTCUSDT",
+  "quoteCurrency": "USDT",
+  "targetSchema": "liquidation-print.v1.schema.json",
+  "purpose": "Capture a liquidation-supported venue case for downstream derivatives stress handling.",
+  "checks": [
+    "schema-validation",
+    "derivatives-normalization"
+  ],
+  "rawMessages": [
+    {
+      "type": "liquidation",
+      "liquidationId": "liq-7001",
+      "side": "sell",
+      "price": "63880.00",
+      "size": "1.50",
+      "exchangeTs": "2026-03-06T12:00:06.000Z",
+      "recvTs": "2026-03-06T12:00:06.020Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "liquidation-print",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTCUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BYBIT",
+      "marketType": "perpetual",
+      "exchangeTs": "2026-03-06T12:00:06.000Z",
+      "recvTs": "2026-03-06T12:00:06.020Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "liquidation:liq-7001"
+    }
+  ]
+}

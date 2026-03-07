@@ -1,0 +1,41 @@
+{
+  "manifestVersion": "v1",
+  "layout": "tests/replay/seeds/<seed-name>.seed.v1.json",
+  "requiredSeedCategories": [
+    "normal-microstructure",
+    "fragmented-world-usa",
+    "degraded-feed"
+  ],
+  "seeds": [
+    {
+      "id": "btc-normal-microstructure-window",
+      "category": "normal-microstructure",
+      "path": "tests/replay/seeds/btc-normal-microstructure-window.seed.v1.json",
+      "fixtureRefs": [
+        "binance-btc-usdt-happy-trade",
+        "coinbase-btc-usd-happy-top-book",
+        "bybit-btc-usdt-happy-funding"
+      ]
+    },
+    {
+      "id": "btc-fragmented-world-usa-window",
+      "category": "fragmented-world-usa",
+      "path": "tests/replay/seeds/btc-fragmented-world-usa-window.seed.v1.json",
+      "fixtureRefs": [
+        "binance-btc-usdt-happy-trade",
+        "coinbase-btc-usd-happy-top-book",
+        "bybit-btc-usdt-edge-late-out-of-order"
+      ]
+    },
+    {
+      "id": "eth-degraded-feed-window",
+      "category": "degraded-feed",
+      "path": "tests/replay/seeds/eth-degraded-feed-window.seed.v1.json",
+      "fixtureRefs": [
+        "kraken-eth-usd-edge-stale-feed",
+        "binance-eth-usdt-edge-timestamp-degraded",
+        "binance-eth-usdt-happy-mark-index"
+      ]
+    }
+  ]
+}

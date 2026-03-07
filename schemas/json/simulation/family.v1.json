@@ -1,0 +1,23 @@
+{
+  "manifestVersion": "v1",
+  "family": "simulation",
+  "directory": "schemas/json/simulation",
+  "filenamePattern": "<schema-name>.v{major}.schema.json",
+  "schemaVersionPolicy": "Additive changes stay within the active major version. Breaking changes require a new major schema filename and explicit consumer rollout.",
+  "supportedSchemaVersions": [
+    "v1"
+  ],
+  "purpose": "Offline simulated execution requests and results used to estimate edge after costs.",
+  "reservedFields": [
+    "schemaVersion",
+    "symbol",
+    "marketType",
+    "configVersion",
+    "regimeTags",
+    "replayRef"
+  ],
+  "plannedSchemas": [
+    "simulated-execution-request.v1.schema.json",
+    "simulated-execution-result.v1.schema.json"
+  ]
+}

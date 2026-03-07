@@ -1,0 +1,40 @@
+{
+  "fixtureVersion": "v1",
+  "id": "bybit-eth-usdt-happy-open-interest",
+  "family": "events",
+  "category": "happy-open-interest",
+  "scenarioClass": "happy-path",
+  "venue": "BYBIT",
+  "symbol": "ETH-USD",
+  "sourceSymbol": "ETHUSDT",
+  "quoteCurrency": "USDT",
+  "targetSchema": "open-interest-snapshot.v1.schema.json",
+  "purpose": "Provide a starter open-interest fixture for derivatives context normalization.",
+  "checks": [
+    "schema-validation",
+    "derivatives-normalization"
+  ],
+  "rawMessages": [
+    {
+      "type": "open-interest",
+      "openInterest": "82450.5",
+      "exchangeTs": "2026-03-06T12:00:04.000Z",
+      "recvTs": "2026-03-06T12:00:04.060Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "open-interest-snapshot",
+      "symbol": "ETH-USD",
+      "sourceSymbol": "ETHUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BYBIT",
+      "marketType": "perpetual",
+      "exchangeTs": "2026-03-06T12:00:04.000Z",
+      "recvTs": "2026-03-06T12:00:04.060Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "oi:2026-03-06T12:00:04.000Z"
+    }
+  ]
+}

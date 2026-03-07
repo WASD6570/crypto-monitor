@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "v1",
+  "id": "btc-normal-microstructure-window",
+  "category": "normal-microstructure",
+  "symbol": "BTC-USD",
+  "targetSchema": "replay-seed.v1.schema.json",
+  "purpose": "Starter normal replay window for cross-venue BTC visibility checks.",
+  "fixtureRefs": [
+    "binance-btc-usdt-happy-trade",
+    "coinbase-btc-usd-happy-top-book",
+    "bybit-btc-usdt-happy-funding"
+  ],
+  "tags": [
+    "normal-ordering",
+    "cross-venue"
+  ],
+  "expectedDeterminism": {
+    "eventCount": 3,
+    "orderedSourceRecordIds": [
+      "trade:1001",
+      "ticker:2026-03-06T12:00:01.000Z",
+      "funding:2026-03-06T12:00:03.000Z"
+    ]
+  }
+}

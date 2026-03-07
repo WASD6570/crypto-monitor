@@ -1,0 +1,23 @@
+{
+  "manifestVersion": "v1",
+  "family": "outcomes",
+  "directory": "schemas/json/outcomes",
+  "filenamePattern": "<schema-name>.v{major}.schema.json",
+  "schemaVersionPolicy": "Additive changes stay within the active major version. Breaking changes require a new major schema filename and explicit consumer rollout.",
+  "supportedSchemaVersions": [
+    "v1"
+  ],
+  "purpose": "Evaluation payloads that explain whether a delivered alert later worked and why.",
+  "reservedFields": [
+    "schemaVersion",
+    "symbol",
+    "configVersion",
+    "regimeTags",
+    "replayRef",
+    "sourceRecordId"
+  ],
+  "plannedSchemas": [
+    "alert-outcome.v1.schema.json",
+    "alert-review.v1.schema.json"
+  ]
+}

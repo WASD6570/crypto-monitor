@@ -1,0 +1,25 @@
+{
+  "manifestVersion": "v1",
+  "family": "replay",
+  "directory": "schemas/json/replay",
+  "filenamePattern": "<schema-name>.v{major}.schema.json",
+  "schemaVersionPolicy": "Additive changes stay within the active major version. Breaking changes require a new major schema filename and explicit consumer rollout.",
+  "supportedSchemaVersions": [
+    "v1"
+  ],
+  "purpose": "Deterministic replay seeds, replay windows, and replay result metadata.",
+  "reservedFields": [
+    "schemaVersion",
+    "symbol",
+    "exchangeTs",
+    "recvTs",
+    "timestampStatus",
+    "replayRef",
+    "sourceRecordId"
+  ],
+  "plannedSchemas": [
+    "replay-seed.v1.schema.json",
+    "replay-window.v1.schema.json",
+    "replay-run-result.v1.schema.json"
+  ]
+}

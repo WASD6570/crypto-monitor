@@ -1,0 +1,41 @@
+{
+  "fixtureVersion": "v1",
+  "id": "kraken-eth-usd-edge-stale-feed",
+  "family": "events",
+  "category": "edge-stale-feed",
+  "scenarioClass": "edge-case",
+  "venue": "KRAKEN",
+  "symbol": "ETH-USD",
+  "sourceSymbol": "ETH/USD",
+  "quoteCurrency": "USD",
+  "targetSchema": "feed-health.v1.schema.json",
+  "purpose": "Exercise a stale heartbeat path that later feed-health logic can reuse.",
+  "checks": [
+    "schema-validation",
+    "staleness-detection"
+  ],
+  "rawMessages": [
+    {
+      "type": "heartbeat",
+      "status": "missing-update-window",
+      "exchangeTs": "2026-03-06T12:02:00.000Z",
+      "recvTs": "2026-03-06T12:02:12.500Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "feed-health",
+      "symbol": "ETH-USD",
+      "sourceSymbol": "ETH/USD",
+      "quoteCurrency": "USD",
+      "venue": "KRAKEN",
+      "marketType": "spot",
+      "exchangeTs": "2026-03-06T12:02:00.000Z",
+      "recvTs": "2026-03-06T12:02:12.500Z",
+      "timestampStatus": "normal",
+      "feedHealthState": "STALE",
+      "sourceRecordId": "heartbeat:2026-03-06T12:02:00.000Z"
+    }
+  ]
+}

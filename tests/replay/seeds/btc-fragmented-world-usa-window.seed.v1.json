@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "v1",
+  "id": "btc-fragmented-world-usa-window",
+  "category": "fragmented-world-usa",
+  "symbol": "BTC-USD",
+  "targetSchema": "replay-seed.v1.schema.json",
+  "purpose": "Starter fragmented replay window that mixes WORLD and USA inputs for deterministic downstream state checks.",
+  "fixtureRefs": [
+    "binance-btc-usdt-happy-trade",
+    "coinbase-btc-usd-happy-top-book",
+    "bybit-btc-usdt-edge-late-out-of-order"
+  ],
+  "tags": [
+    "fragmented-world-usa",
+    "out-of-order-input"
+  ],
+  "expectedDeterminism": {
+    "eventCount": 4,
+    "orderedSourceRecordIds": [
+      "trade:1001",
+      "ticker:2026-03-06T12:00:01.000Z",
+      "trade:3002",
+      "trade:3001"
+    ]
+  }
+}

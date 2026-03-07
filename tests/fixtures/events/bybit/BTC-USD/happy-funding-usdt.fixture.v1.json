@@ -1,0 +1,41 @@
+{
+  "fixtureVersion": "v1",
+  "id": "bybit-btc-usdt-happy-funding",
+  "family": "events",
+  "category": "happy-funding",
+  "scenarioClass": "happy-path",
+  "venue": "BYBIT",
+  "symbol": "BTC-USD",
+  "sourceSymbol": "BTCUSDT",
+  "quoteCurrency": "USDT",
+  "targetSchema": "funding-rate.v1.schema.json",
+  "purpose": "Provide a starter perpetual funding fixture for downstream derivatives context.",
+  "checks": [
+    "schema-validation",
+    "derivatives-normalization"
+  ],
+  "rawMessages": [
+    {
+      "type": "funding",
+      "fundingRate": "0.0001",
+      "nextFundingTs": "2026-03-06T16:00:00Z",
+      "exchangeTs": "2026-03-06T12:00:03.000Z",
+      "recvTs": "2026-03-06T12:00:03.050Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "funding-rate",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTCUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BYBIT",
+      "marketType": "perpetual",
+      "exchangeTs": "2026-03-06T12:00:03.000Z",
+      "recvTs": "2026-03-06T12:00:03.050Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "funding:2026-03-06T12:00:03.000Z"
+    }
+  ]
+}

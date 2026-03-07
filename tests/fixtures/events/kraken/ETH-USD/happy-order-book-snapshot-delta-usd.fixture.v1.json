@@ -1,0 +1,65 @@
+{
+  "fixtureVersion": "v1",
+  "id": "kraken-eth-usd-happy-order-book-snapshot-delta",
+  "family": "events",
+  "category": "happy-order-book-snapshot-delta",
+  "scenarioClass": "happy-path",
+  "venue": "KRAKEN",
+  "symbol": "ETH-USD",
+  "sourceSymbol": "ETH/USD",
+  "quoteCurrency": "USD",
+  "targetSchema": "order-book-top.v1.schema.json",
+  "purpose": "Exercise deterministic snapshot and delta sequencing for order-book normalization.",
+  "checks": [
+    "schema-validation",
+    "sequence-integrity"
+  ],
+  "rawMessages": [
+    {
+      "type": "snapshot",
+      "sequence": 500,
+      "bestBidPrice": "3499.10",
+      "bestAskPrice": "3499.40",
+      "exchangeTs": "2026-03-06T12:00:02.000Z",
+      "recvTs": "2026-03-06T12:00:02.040Z"
+    },
+    {
+      "type": "delta",
+      "sequence": 501,
+      "bestBidPrice": "3499.20",
+      "bestAskPrice": "3499.50",
+      "exchangeTs": "2026-03-06T12:00:02.100Z",
+      "recvTs": "2026-03-06T12:00:02.130Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "order-book-top",
+      "bookAction": "snapshot",
+      "symbol": "ETH-USD",
+      "sourceSymbol": "ETH/USD",
+      "quoteCurrency": "USD",
+      "venue": "KRAKEN",
+      "marketType": "spot",
+      "exchangeTs": "2026-03-06T12:00:02.000Z",
+      "recvTs": "2026-03-06T12:00:02.040Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "book:500"
+    },
+    {
+      "schemaVersion": "v1",
+      "eventType": "order-book-top",
+      "bookAction": "delta",
+      "symbol": "ETH-USD",
+      "sourceSymbol": "ETH/USD",
+      "quoteCurrency": "USD",
+      "venue": "KRAKEN",
+      "marketType": "spot",
+      "exchangeTs": "2026-03-06T12:00:02.100Z",
+      "recvTs": "2026-03-06T12:00:02.130Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "book:501"
+    }
+  ]
+}

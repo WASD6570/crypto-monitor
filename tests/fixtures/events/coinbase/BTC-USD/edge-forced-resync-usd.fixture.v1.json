@@ -1,0 +1,41 @@
+{
+  "fixtureVersion": "v1",
+  "id": "coinbase-btc-usd-edge-forced-resync",
+  "family": "events",
+  "category": "edge-forced-resync",
+  "scenarioClass": "edge-case",
+  "venue": "COINBASE",
+  "symbol": "BTC-USD",
+  "sourceSymbol": "BTC-USD",
+  "quoteCurrency": "USD",
+  "targetSchema": "feed-health.v1.schema.json",
+  "purpose": "Exercise explicit forced resync behavior after a channel reset.",
+  "checks": [
+    "schema-validation",
+    "resync-detection"
+  ],
+  "rawMessages": [
+    {
+      "type": "resync-required",
+      "reason": "channel-reset",
+      "exchangeTs": "2026-03-06T12:01:30.000Z",
+      "recvTs": "2026-03-06T12:01:30.010Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "feed-health",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTC-USD",
+      "quoteCurrency": "USD",
+      "venue": "COINBASE",
+      "marketType": "spot",
+      "exchangeTs": "2026-03-06T12:01:30.000Z",
+      "recvTs": "2026-03-06T12:01:30.010Z",
+      "timestampStatus": "normal",
+      "feedHealthState": "DEGRADED",
+      "sourceRecordId": "resync:channel-reset"
+    }
+  ]
+}

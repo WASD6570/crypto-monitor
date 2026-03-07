@@ -1,0 +1,24 @@
+{
+  "manifestVersion": "v1",
+  "family": "alerts",
+  "directory": "schemas/json/alerts",
+  "filenamePattern": "<schema-name>.v{major}.schema.json",
+  "schemaVersionPolicy": "Additive changes stay within the active major version. Breaking changes require a new major schema filename and explicit consumer rollout.",
+  "supportedSchemaVersions": [
+    "v1"
+  ],
+  "purpose": "Operator-facing alert payloads, routing metadata, and delivery status records.",
+  "reservedFields": [
+    "schemaVersion",
+    "symbol",
+    "marketType",
+    "configVersion",
+    "regimeTags",
+    "feedHealthState",
+    "replayRef"
+  ],
+  "plannedSchemas": [
+    "trade-alert.v1.schema.json",
+    "alert-delivery.v1.schema.json"
+  ]
+}

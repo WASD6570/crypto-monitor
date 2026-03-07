@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/json/replay/replay-seed.v1.schema.json",
+  "title": "Replay Seed v1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schemaVersion",
+    "id",
+    "category",
+    "symbol",
+    "targetSchema",
+    "purpose",
+    "fixtureRefs",
+    "tags",
+    "expectedDeterminism"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "v1"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "category": {
+      "type": "string",
+      "enum": ["normal-microstructure", "fragmented-world-usa", "degraded-feed"]
+    },
+    "symbol": {
+      "type": "string",
+      "enum": ["BTC-USD", "ETH-USD"]
+    },
+    "targetSchema": {
+      "const": "replay-seed.v1.schema.json"
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fixtureRefs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "tags": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "expectedDeterminism": {
+      "type": "object",
+      "required": ["eventCount", "orderedSourceRecordIds"],
+      "properties": {
+        "eventCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "orderedSourceRecordIds": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

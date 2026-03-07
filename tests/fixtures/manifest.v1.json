@@ -1,0 +1,99 @@
+{
+  "manifestVersion": "v1",
+  "layout": "tests/fixtures/<family>/<venue>/<symbol>/<scenario>.fixture.v1.json",
+  "requiredCategories": [
+    "happy-trades",
+    "happy-top-of-book",
+    "happy-order-book-snapshot-delta",
+    "happy-funding",
+    "happy-open-interest",
+    "happy-mark-index",
+    "happy-liquidation",
+    "edge-sequence-gap",
+    "edge-forced-resync",
+    "edge-stale-feed",
+    "edge-timestamp-degraded",
+    "edge-late-out-of-order",
+    "edge-quote-variant"
+  ],
+  "fixtures": [
+    {
+      "id": "binance-btc-usdt-happy-trade",
+      "category": "happy-trades",
+      "scenarioClass": "happy-path",
+      "path": "tests/fixtures/events/binance/BTC-USD/happy-trade-usdt.fixture.v1.json"
+    },
+    {
+      "id": "coinbase-btc-usd-happy-top-book",
+      "category": "happy-top-of-book",
+      "scenarioClass": "happy-path",
+      "path": "tests/fixtures/events/coinbase/BTC-USD/happy-top-book-usd.fixture.v1.json"
+    },
+    {
+      "id": "kraken-eth-usd-happy-order-book-snapshot-delta",
+      "category": "happy-order-book-snapshot-delta",
+      "scenarioClass": "happy-path",
+      "path": "tests/fixtures/events/kraken/ETH-USD/happy-order-book-snapshot-delta-usd.fixture.v1.json"
+    },
+    {
+      "id": "bybit-btc-usdt-happy-funding",
+      "category": "happy-funding",
+      "scenarioClass": "happy-path",
+      "path": "tests/fixtures/events/bybit/BTC-USD/happy-funding-usdt.fixture.v1.json"
+    },
+    {
+      "id": "bybit-eth-usdt-happy-open-interest",
+      "category": "happy-open-interest",
+      "scenarioClass": "happy-path",
+      "path": "tests/fixtures/events/bybit/ETH-USD/happy-open-interest-usdt.fixture.v1.json"
+    },
+    {
+      "id": "binance-eth-usdt-happy-mark-index",
+      "category": "happy-mark-index",
+      "scenarioClass": "happy-path",
+      "path": "tests/fixtures/events/binance/ETH-USD/happy-mark-index-usdt.fixture.v1.json"
+    },
+    {
+      "id": "bybit-btc-usdt-happy-liquidation",
+      "category": "happy-liquidation",
+      "scenarioClass": "happy-path",
+      "path": "tests/fixtures/events/bybit/BTC-USD/happy-liquidation-usdt.fixture.v1.json"
+    },
+    {
+      "id": "binance-btc-usdt-edge-sequence-gap",
+      "category": "edge-sequence-gap",
+      "scenarioClass": "edge-case",
+      "path": "tests/fixtures/events/binance/BTC-USD/edge-sequence-gap-usdt.fixture.v1.json"
+    },
+    {
+      "id": "coinbase-btc-usd-edge-forced-resync",
+      "category": "edge-forced-resync",
+      "scenarioClass": "edge-case",
+      "path": "tests/fixtures/events/coinbase/BTC-USD/edge-forced-resync-usd.fixture.v1.json"
+    },
+    {
+      "id": "kraken-eth-usd-edge-stale-feed",
+      "category": "edge-stale-feed",
+      "scenarioClass": "edge-case",
+      "path": "tests/fixtures/events/kraken/ETH-USD/edge-stale-feed-usd.fixture.v1.json"
+    },
+    {
+      "id": "binance-eth-usdt-edge-timestamp-degraded",
+      "category": "edge-timestamp-degraded",
+      "scenarioClass": "edge-case",
+      "path": "tests/fixtures/events/binance/ETH-USD/edge-timestamp-degraded-usdt.fixture.v1.json"
+    },
+    {
+      "id": "bybit-btc-usdt-edge-late-out-of-order",
+      "category": "edge-late-out-of-order",
+      "scenarioClass": "edge-case",
+      "path": "tests/fixtures/events/bybit/BTC-USD/edge-late-out-of-order-usdt.fixture.v1.json"
+    },
+    {
+      "id": "coinbase-eth-usdc-edge-quote-variant",
+      "category": "edge-quote-variant",
+      "scenarioClass": "edge-case",
+      "path": "tests/fixtures/events/coinbase/ETH-USD/edge-quote-variant-usdc.fixture.v1.json"
+    }
+  ]
+}

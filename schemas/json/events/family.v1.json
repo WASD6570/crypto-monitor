@@ -1,0 +1,32 @@
+{
+  "manifestVersion": "v1",
+  "family": "events",
+  "directory": "schemas/json/events",
+  "filenamePattern": "<schema-name>.v{major}.schema.json",
+  "schemaVersionPolicy": "Additive changes stay within the active major version. Breaking changes require a new major schema filename and explicit consumer rollout.",
+  "supportedSchemaVersions": [
+    "v1"
+  ],
+  "purpose": "Canonical normalized venue payloads and feed-health source events used by ingestion, replay, and downstream derivations.",
+  "reservedFields": [
+    "schemaVersion",
+    "symbol",
+    "sourceSymbol",
+    "quoteCurrency",
+    "venue",
+    "marketType",
+    "exchangeTs",
+    "recvTs",
+    "timestampStatus",
+    "sourceRecordId"
+  ],
+  "plannedSchemas": [
+    "market-trade.v1.schema.json",
+    "order-book-top.v1.schema.json",
+    "feed-health.v1.schema.json",
+    "funding-rate.v1.schema.json",
+    "open-interest-snapshot.v1.schema.json",
+    "mark-index.v1.schema.json",
+    "liquidation-print.v1.schema.json"
+  ]
+}

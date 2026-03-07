@@ -1,0 +1,41 @@
+{
+  "fixtureVersion": "v1",
+  "id": "binance-eth-usdt-happy-mark-index",
+  "family": "events",
+  "category": "happy-mark-index",
+  "scenarioClass": "happy-path",
+  "venue": "BINANCE",
+  "symbol": "ETH-USD",
+  "sourceSymbol": "ETHUSDT",
+  "quoteCurrency": "USDT",
+  "targetSchema": "mark-index.v1.schema.json",
+  "purpose": "Provide mark and index context for later visibility and alert consumers.",
+  "checks": [
+    "schema-validation",
+    "derivatives-normalization"
+  ],
+  "rawMessages": [
+    {
+      "type": "mark-index",
+      "markPrice": "3500.10",
+      "indexPrice": "3499.80",
+      "exchangeTs": "2026-03-06T12:00:05.000Z",
+      "recvTs": "2026-03-06T12:00:05.040Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "mark-index",
+      "symbol": "ETH-USD",
+      "sourceSymbol": "ETHUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BINANCE",
+      "marketType": "perpetual",
+      "exchangeTs": "2026-03-06T12:00:05.000Z",
+      "recvTs": "2026-03-06T12:00:05.040Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "mark-index:2026-03-06T12:00:05.000Z"
+    }
+  ]
+}

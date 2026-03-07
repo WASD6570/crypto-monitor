@@ -1,0 +1,65 @@
+{
+  "fixtureVersion": "v1",
+  "id": "bybit-btc-usdt-edge-late-out-of-order",
+  "family": "events",
+  "category": "edge-late-out-of-order",
+  "scenarioClass": "edge-case",
+  "venue": "BYBIT",
+  "symbol": "BTC-USD",
+  "sourceSymbol": "BTCUSDT",
+  "quoteCurrency": "USDT",
+  "targetSchema": "market-trade.v1.schema.json",
+  "purpose": "Exercise late and out-of-order trade handling while preserving provenance.",
+  "checks": [
+    "schema-validation",
+    "late-event-handling"
+  ],
+  "rawMessages": [
+    {
+      "type": "trade",
+      "tradeId": "3002",
+      "price": "63980.50",
+      "size": "0.25",
+      "side": "sell",
+      "exchangeTs": "2026-03-06T12:03:00.200Z",
+      "recvTs": "2026-03-06T12:03:00.220Z"
+    },
+    {
+      "type": "trade",
+      "tradeId": "3001",
+      "price": "63981.00",
+      "size": "0.40",
+      "side": "buy",
+      "exchangeTs": "2026-03-06T12:02:59.900Z",
+      "recvTs": "2026-03-06T12:03:00.260Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "market-trade",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTCUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BYBIT",
+      "marketType": "perpetual",
+      "exchangeTs": "2026-03-06T12:03:00.200Z",
+      "recvTs": "2026-03-06T12:03:00.220Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "trade:3002"
+    },
+    {
+      "schemaVersion": "v1",
+      "eventType": "market-trade",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTCUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BYBIT",
+      "marketType": "perpetual",
+      "exchangeTs": "2026-03-06T12:02:59.900Z",
+      "recvTs": "2026-03-06T12:03:00.260Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "trade:3001"
+    }
+  ]
+}

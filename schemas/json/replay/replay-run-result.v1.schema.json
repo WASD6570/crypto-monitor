@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/json/replay/replay-run-result.v1.schema.json",
+  "title": "Replay Run Result v1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schemaVersion",
+    "id",
+    "seedId",
+    "symbol",
+    "status",
+    "outputChecksum"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "v1"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "seedId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "symbol": {
+      "type": "string",
+      "enum": ["BTC-USD", "ETH-USD"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["success", "failed"]
+    },
+    "outputChecksum": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

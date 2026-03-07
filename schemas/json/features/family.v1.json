@@ -1,0 +1,30 @@
+{
+  "manifestVersion": "v1",
+  "family": "features",
+  "directory": "schemas/json/features",
+  "filenamePattern": "<schema-name>.v{major}.schema.json",
+  "schemaVersionPolicy": "Additive changes stay within the active major version. Breaking changes require a new major schema filename and explicit consumer rollout.",
+  "supportedSchemaVersions": [
+    "v1"
+  ],
+  "purpose": "Derived per-venue and composite state used by visibility, regime gating, and later alert logic.",
+  "reservedFields": [
+    "schemaVersion",
+    "symbol",
+    "venue",
+    "compositeId",
+    "marketType",
+    "exchangeTs",
+    "recvTs",
+    "bucketSource",
+    "feedHealthState",
+    "replayRef"
+  ],
+  "plannedSchemas": [
+    "venue-bar-30s.v1.schema.json",
+    "venue-bar-2m.v1.schema.json",
+    "venue-bar-5m.v1.schema.json",
+    "composite-market-state.v1.schema.json",
+    "feed-health-state.v1.schema.json"
+  ]
+}

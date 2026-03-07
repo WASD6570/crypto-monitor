@@ -1,0 +1,43 @@
+{
+  "fixtureVersion": "v1",
+  "id": "coinbase-eth-usdc-edge-quote-variant",
+  "family": "events",
+  "category": "edge-quote-variant",
+  "scenarioClass": "edge-case",
+  "venue": "COINBASE",
+  "symbol": "ETH-USD",
+  "sourceSymbol": "ETH-USDC",
+  "quoteCurrency": "USDC",
+  "targetSchema": "order-book-top.v1.schema.json",
+  "purpose": "Prove quote-currency preservation while canonical symbol identity remains ETH-USD.",
+  "checks": [
+    "schema-validation",
+    "quote-context-preservation"
+  ],
+  "rawMessages": [
+    {
+      "type": "ticker",
+      "bestBidPrice": "3498.10",
+      "bestBidSize": "12.0",
+      "bestAskPrice": "3498.40",
+      "bestAskSize": "9.5",
+      "exchangeTs": "2026-03-06T12:03:30.000Z",
+      "recvTs": "2026-03-06T12:03:30.015Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "order-book-top",
+      "symbol": "ETH-USD",
+      "sourceSymbol": "ETH-USDC",
+      "quoteCurrency": "USDC",
+      "venue": "COINBASE",
+      "marketType": "spot",
+      "exchangeTs": "2026-03-06T12:03:30.000Z",
+      "recvTs": "2026-03-06T12:03:30.015Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "ticker:2026-03-06T12:03:30.000Z"
+    }
+  ]
+}

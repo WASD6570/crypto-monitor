@@ -1,0 +1,51 @@
+{
+  "fixtureVersion": "v1",
+  "id": "binance-btc-usdt-edge-sequence-gap",
+  "family": "events",
+  "category": "edge-sequence-gap",
+  "scenarioClass": "edge-case",
+  "venue": "BINANCE",
+  "symbol": "BTC-USD",
+  "sourceSymbol": "BTCUSDT",
+  "quoteCurrency": "USDT",
+  "targetSchema": "feed-health.v1.schema.json",
+  "purpose": "Exercise a sequence gap that should trigger degraded feed handling rather than silent acceptance.",
+  "checks": [
+    "schema-validation",
+    "gap-detection"
+  ],
+  "rawMessages": [
+    {
+      "type": "snapshot",
+      "sequence": 900,
+      "bestBidPrice": "64010.00",
+      "bestAskPrice": "64010.50",
+      "exchangeTs": "2026-03-06T12:01:00.000Z",
+      "recvTs": "2026-03-06T12:01:00.030Z"
+    },
+    {
+      "type": "delta",
+      "sequence": 902,
+      "bestBidPrice": "64009.80",
+      "bestAskPrice": "64010.40",
+      "exchangeTs": "2026-03-06T12:01:00.100Z",
+      "recvTs": "2026-03-06T12:01:00.120Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "feed-health",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTCUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BINANCE",
+      "marketType": "spot",
+      "exchangeTs": "2026-03-06T12:01:00.100Z",
+      "recvTs": "2026-03-06T12:01:00.120Z",
+      "timestampStatus": "normal",
+      "feedHealthState": "DEGRADED",
+      "sourceRecordId": "gap:900-902"
+    }
+  ]
+}

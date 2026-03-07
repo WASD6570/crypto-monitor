@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/json/events/mark-index.v1.schema.json",
+  "title": "Mark Index Event v1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schemaVersion",
+    "eventType",
+    "symbol",
+    "sourceSymbol",
+    "quoteCurrency",
+    "venue",
+    "marketType",
+    "exchangeTs",
+    "recvTs",
+    "timestampStatus",
+    "sourceRecordId"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "v1"
+    },
+    "eventType": {
+      "const": "mark-index"
+    },
+    "symbol": {
+      "type": "string",
+      "enum": ["BTC-USD", "ETH-USD"]
+    },
+    "sourceSymbol": {
+      "type": "string",
+      "minLength": 1
+    },
+    "quoteCurrency": {
+      "type": "string",
+      "enum": ["USD", "USDT", "USDC"]
+    },
+    "venue": {
+      "type": "string",
+      "enum": ["BINANCE", "BYBIT", "COINBASE", "KRAKEN"]
+    },
+    "marketType": {
+      "type": "string",
+      "enum": ["spot", "perpetual"]
+    },
+    "exchangeTs": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "recvTs": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "timestampStatus": {
+      "type": "string",
+      "enum": ["normal", "degraded"]
+    },
+    "sourceRecordId": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

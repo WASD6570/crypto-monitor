@@ -1,0 +1,43 @@
+{
+  "fixtureVersion": "v1",
+  "id": "coinbase-btc-usd-happy-top-book",
+  "family": "events",
+  "category": "happy-top-of-book",
+  "scenarioClass": "happy-path",
+  "venue": "COINBASE",
+  "symbol": "BTC-USD",
+  "sourceSymbol": "BTC-USD",
+  "quoteCurrency": "USD",
+  "targetSchema": "order-book-top.v1.schema.json",
+  "purpose": "Validate top-of-book normalization for a USA spot venue.",
+  "checks": [
+    "schema-validation",
+    "book-top-normalization"
+  ],
+  "rawMessages": [
+    {
+      "type": "ticker",
+      "bestBidPrice": "63999.90",
+      "bestBidSize": "1.25",
+      "bestAskPrice": "64000.20",
+      "bestAskSize": "0.98",
+      "exchangeTs": "2026-03-06T12:00:01.000Z",
+      "recvTs": "2026-03-06T12:00:01.020Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "order-book-top",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTC-USD",
+      "quoteCurrency": "USD",
+      "venue": "COINBASE",
+      "marketType": "spot",
+      "exchangeTs": "2026-03-06T12:00:01.000Z",
+      "recvTs": "2026-03-06T12:00:01.020Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "ticker:2026-03-06T12:00:01.000Z"
+    }
+  ]
+}

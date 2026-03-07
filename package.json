@@ -1,0 +1,8 @@
+{
+  "name": "crypto-market-copilot",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node scripts/dev/run_contract_runtime_tests.mjs"
+  }
+}

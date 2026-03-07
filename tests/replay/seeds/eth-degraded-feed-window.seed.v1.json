@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "v1",
+  "id": "eth-degraded-feed-window",
+  "category": "degraded-feed",
+  "symbol": "ETH-USD",
+  "targetSchema": "replay-seed.v1.schema.json",
+  "purpose": "Starter degraded replay window combining stale feed and timestamp degradation signals.",
+  "fixtureRefs": [
+    "kraken-eth-usd-edge-stale-feed",
+    "binance-eth-usdt-edge-timestamp-degraded",
+    "binance-eth-usdt-happy-mark-index"
+  ],
+  "tags": [
+    "stale-feed",
+    "timestamp-degraded"
+  ],
+  "expectedDeterminism": {
+    "eventCount": 3,
+    "orderedSourceRecordIds": [
+      "heartbeat:2026-03-06T12:02:00.000Z",
+      "trade:2010",
+      "mark-index:2026-03-06T12:00:05.000Z"
+    ]
+  }
+}

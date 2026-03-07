@@ -1,0 +1,144 @@
+{
+  "schemaVersion": "v1",
+  "environment": "local",
+  "symbols": ["BTC-USD", "ETH-USD"],
+  "normalizerHandoff": {
+    "service": "services/normalizer",
+    "preserveExchangeTs": true,
+    "preserveRecvTs": true,
+    "propagateDegradedReasons": true
+  },
+  "venues": {
+    "BINANCE": {
+      "servicePath": "services/venue-binance",
+      "websocket": {
+        "heartbeatTimeoutMs": 10000,
+        "reconnectBackoffMinMs": 500,
+        "reconnectBackoffMaxMs": 5000,
+        "reconnectLoopThreshold": 4,
+        "connectsPerMinuteLimit": 12,
+        "resubscribeOnReconnect": true
+      },
+      "rest": {
+        "snapshotRecoveryPerMinuteLimit": 30,
+        "snapshotCooldownMs": 1000
+      },
+      "health": {
+        "messageStaleAfterMs": 15000,
+        "snapshotStaleAfterMs": 30000,
+        "resyncLoopThreshold": 3,
+        "clockOffsetWarningMs": 100,
+        "clockOffsetDegradedMs": 250
+      },
+      "snapshotRefreshPolicy": {
+        "required": true,
+        "refreshIntervalMs": 300000
+      },
+      "streams": [
+        {"kind": "trades", "marketType": "spot", "snapshotRequired": false},
+        {"kind": "top-of-book", "marketType": "spot", "snapshotRequired": false},
+        {"kind": "order-book", "marketType": "spot", "snapshotRequired": true},
+        {"kind": "funding-rate", "marketType": "perpetual", "snapshotRequired": false},
+        {"kind": "open-interest", "marketType": "perpetual", "snapshotRequired": false},
+        {"kind": "mark-index", "marketType": "perpetual", "snapshotRequired": false},
+        {"kind": "liquidation", "marketType": "perpetual", "snapshotRequired": false}
+      ]
+    },
+    "BYBIT": {
+      "servicePath": "services/venue-bybit",
+      "websocket": {
+        "heartbeatTimeoutMs": 10000,
+        "reconnectBackoffMinMs": 500,
+        "reconnectBackoffMaxMs": 5000,
+        "reconnectLoopThreshold": 4,
+        "connectsPerMinuteLimit": 12,
+        "resubscribeOnReconnect": true
+      },
+      "rest": {
+        "snapshotRecoveryPerMinuteLimit": 30,
+        "snapshotCooldownMs": 1000
+      },
+      "health": {
+        "messageStaleAfterMs": 15000,
+        "snapshotStaleAfterMs": 30000,
+        "resyncLoopThreshold": 3,
+        "clockOffsetWarningMs": 100,
+        "clockOffsetDegradedMs": 250
+      },
+      "snapshotRefreshPolicy": {
+        "required": true,
+        "refreshIntervalMs": 300000
+      },
+      "streams": [
+        {"kind": "trades", "marketType": "spot", "snapshotRequired": false},
+        {"kind": "top-of-book", "marketType": "spot", "snapshotRequired": false},
+        {"kind": "order-book", "marketType": "spot", "snapshotRequired": true},
+        {"kind": "funding-rate", "marketType": "perpetual", "snapshotRequired": false},
+        {"kind": "open-interest", "marketType": "perpetual", "snapshotRequired": false},
+        {"kind": "mark-index", "marketType": "perpetual", "snapshotRequired": false},
+        {"kind": "liquidation", "marketType": "perpetual", "snapshotRequired": false}
+      ]
+    },
+    "COINBASE": {
+      "servicePath": "services/venue-coinbase",
+      "websocket": {
+        "heartbeatTimeoutMs": 12000,
+        "reconnectBackoffMinMs": 500,
+        "reconnectBackoffMaxMs": 5000,
+        "reconnectLoopThreshold": 4,
+        "connectsPerMinuteLimit": 10,
+        "resubscribeOnReconnect": true
+      },
+      "rest": {
+        "snapshotRecoveryPerMinuteLimit": 0,
+        "snapshotCooldownMs": 0
+      },
+      "health": {
+        "messageStaleAfterMs": 15000,
+        "snapshotStaleAfterMs": 60000,
+        "resyncLoopThreshold": 3,
+        "clockOffsetWarningMs": 100,
+        "clockOffsetDegradedMs": 250
+      },
+      "snapshotRefreshPolicy": {
+        "required": false,
+        "refreshIntervalMs": 0
+      },
+      "streams": [
+        {"kind": "trades", "marketType": "spot", "snapshotRequired": false},
+        {"kind": "top-of-book", "marketType": "spot", "snapshotRequired": false}
+      ]
+    },
+    "KRAKEN": {
+      "servicePath": "services/venue-kraken",
+      "websocket": {
+        "heartbeatTimeoutMs": 10000,
+        "reconnectBackoffMinMs": 500,
+        "reconnectBackoffMaxMs": 5000,
+        "reconnectLoopThreshold": 3,
+        "connectsPerMinuteLimit": 8,
+        "resubscribeOnReconnect": true
+      },
+      "rest": {
+        "snapshotRecoveryPerMinuteLimit": 24,
+        "snapshotCooldownMs": 1500
+      },
+      "health": {
+        "messageStaleAfterMs": 12000,
+        "snapshotStaleAfterMs": 25000,
+        "resyncLoopThreshold": 2,
+        "clockOffsetWarningMs": 100,
+        "clockOffsetDegradedMs": 250
+      },
+      "snapshotRefreshPolicy": {
+        "required": true,
+        "refreshIntervalMs": 180000
+      },
+      "streams": [
+        {"kind": "trades", "marketType": "spot", "snapshotRequired": false},
+        {"kind": "top-of-book", "marketType": "spot", "snapshotRequired": false},
+        {"kind": "order-book", "marketType": "spot", "snapshotRequired": true}
+      ]
+    }
+  }
+}

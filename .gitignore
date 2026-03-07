@@ -27,3 +27,5 @@ bin/
 # Logs
 *.log
 
+# Misc
+handoff.md

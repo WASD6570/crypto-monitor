@@ -9,6 +9,7 @@ Current service boundaries:
 - `venue-binance`
 - `venue-coinbase`
 - `venue-bybit`
+- `venue-kraken`
 - `normalizer`
 - `feature-engine`
 - `regime-engine`

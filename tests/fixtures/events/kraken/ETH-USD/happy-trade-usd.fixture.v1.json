@@ -1,0 +1,44 @@
+{
+  "fixtureVersion": "v1",
+  "id": "kraken-eth-usd-happy-trade",
+  "family": "events",
+  "category": "happy-trade",
+  "scenarioClass": "happy-path",
+  "venue": "KRAKEN",
+  "symbol": "ETH-USD",
+  "sourceSymbol": "ETH/USD",
+  "quoteCurrency": "USD",
+  "targetSchema": "market-trade.v1.schema.json",
+  "purpose": "Validate Kraken trade parsing and canonical trade normalization.",
+  "checks": [
+    "schema-validation",
+    "trade-normalization"
+  ],
+  "rawMessages": [
+    {
+      "channel": "trade",
+      "pair": "ETH/USD",
+      "tradeId": "7001",
+      "price": "3499.20",
+      "volume": "0.50",
+      "side": "buy",
+      "exchangeTs": "2026-03-06T12:00:01.000Z",
+      "recvTs": "2026-03-06T12:00:01.040Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "market-trade",
+      "symbol": "ETH-USD",
+      "sourceSymbol": "ETH/USD",
+      "quoteCurrency": "USD",
+      "venue": "KRAKEN",
+      "marketType": "spot",
+      "exchangeTs": "2026-03-06T12:00:01.000Z",
+      "recvTs": "2026-03-06T12:00:01.04Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "trade:7001"
+    }
+  ]
+}

@@ -35,6 +35,7 @@
       "recvTs": "2026-03-06T12:01:30.010Z",
       "timestampStatus": "normal",
       "feedHealthState": "DEGRADED",
+      "degradationReasons": ["resync-loop"],
       "sourceRecordId": "resync:channel-reset"
     }
   ]

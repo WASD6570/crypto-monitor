@@ -1,0 +1,60 @@
+{
+  "fixtureVersion": "v1",
+  "id": "bybit-btc-usdt-edge-sequence-gap",
+  "family": "events",
+  "category": "edge-sequence-gap",
+  "scenarioClass": "edge-case",
+  "venue": "BYBIT",
+  "symbol": "BTC-USD",
+  "sourceSymbol": "BTCUSDT",
+  "quoteCurrency": "USDT",
+  "targetSchema": "feed-health.v1.schema.json",
+  "purpose": "Exercise deterministic gap-driven resync behavior for the Bybit order-book path.",
+  "checks": [
+    "schema-validation",
+    "resync-detection"
+  ],
+  "rawMessages": [
+    {
+      "topic": "orderbook.1.BTCUSDT",
+      "type": "snapshot",
+      "ts": 1772798460000,
+      "data": {
+        "s": "BTCUSDT",
+        "u": 900,
+        "b": [["64010.00", "1.25"]],
+        "a": [["64010.50", "0.90"]]
+      },
+      "recvTs": "2026-03-06T12:01:00.03Z"
+    },
+    {
+      "topic": "orderbook.1.BTCUSDT",
+      "type": "delta",
+      "ts": 1772798460100,
+      "data": {
+        "s": "BTCUSDT",
+        "u": 902,
+        "b": [["64009.80", "1.10"]],
+        "a": [["64010.40", "0.80"]]
+      },
+      "recvTs": "2026-03-06T12:01:00.12Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "feed-health",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTCUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BYBIT",
+      "marketType": "spot",
+      "exchangeTs": "2026-03-06T12:01:00.1Z",
+      "recvTs": "2026-03-06T12:01:00.12Z",
+      "timestampStatus": "normal",
+      "feedHealthState": "DEGRADED",
+      "degradationReasons": ["sequence-gap"],
+      "sourceRecordId": "gap:900-902"
+    }
+  ]
+}

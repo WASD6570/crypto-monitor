@@ -20,4 +20,5 @@
 - REST recovery is limited to order-book bootstrap and bounded resync.
 - Reconnects must use bounded backoff and resubscribe the active stream set.
 - Health output is a first-class stream alongside canonical payload handoff.
-- `ParseTradeEvent` is the first native Binance parser boundary; it turns websocket trade payloads into the shared ingestion trade model before canonical normalization.
+- `ParseTradeEvent` turns websocket trade payloads into the shared ingestion trade model before canonical normalization.
+- `ParseOrderBookSnapshot` and `ParseOrderBookDelta` turn native Binance REST snapshot and websocket `depthUpdate` payloads into the shared ingestion order-book model before sequencing and canonical normalization.

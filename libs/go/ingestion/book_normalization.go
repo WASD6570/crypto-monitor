@@ -51,6 +51,7 @@ type CanonicalFeedHealthEvent struct {
 	RecvTs                  string                   `json:"recvTs"`
 	TimestampStatus         CanonicalTimestampStatus `json:"timestampStatus"`
 	FeedHealthState         FeedHealthState          `json:"feedHealthState"`
+	DegradationReasons      []DegradationReason      `json:"degradationReasons,omitempty"`
 	SourceRecordID          string                   `json:"sourceRecordId"`
 	CanonicalEventTime      time.Time                `json:"-"`
 	TimestampFallbackReason TimestampFallbackReason  `json:"-"`
@@ -71,13 +72,35 @@ func NormalizeOrderBookMessage(metadata BookMetadata, message OrderBookMessage, 
 	}
 
 	kind := BookUpdateKind(message.Type)
-	if kind != BookUpdateSnapshot && kind != BookUpdateDelta {
+	if kind != BookUpdateSnapshot && kind != BookUpdateDelta && kind != BookUpdateTopOfBook {
 		return OrderBookNormalizationResult{}, fmt.Errorf("unsupported book message type %q", message.Type)
 	}
 
 	resolvedTs, err := resolveMessageTimestamps(message.ExchangeTs, message.RecvTs, policy)
 	if err != nil {
 		return OrderBookNormalizationResult{}, err
+	}
+
+	if kind == BookUpdateTopOfBook {
+		return OrderBookNormalizationResult{
+			SequenceResult: SequenceResult{Action: SequenceAcceptedTopOfBook},
+			OrderBookEvent: &CanonicalOrderBookEvent{
+				SchemaVersion:           "v1",
+				EventType:               "order-book-top",
+				BookAction:              string(kind),
+				Symbol:                  metadata.Symbol,
+				SourceSymbol:            metadata.SourceSymbol,
+				QuoteCurrency:           metadata.QuoteCurrency,
+				Venue:                   metadata.Venue,
+				MarketType:              metadata.MarketType,
+				ExchangeTs:              message.ExchangeTs,
+				RecvTs:                  message.RecvTs,
+				TimestampStatus:         resolvedTs.Status,
+				SourceRecordID:          topOfBookSourceRecordID(message),
+				CanonicalEventTime:      resolvedTs.EventTime,
+				TimestampFallbackReason: resolvedTs.FallbackReason,
+			},
+		}, nil
 	}
 
 	sequenceResult, err := sequencer.Apply(SequencedBookUpdate{Kind: kind, Sequence: message.Sequence})
@@ -119,6 +142,7 @@ func NormalizeOrderBookMessage(metadata BookMetadata, message OrderBookMessage, 
 			RecvTs:                  message.RecvTs,
 			TimestampStatus:         resolvedTs.Status,
 			FeedHealthState:         FeedHealthDegraded,
+			DegradationReasons:      []DegradationReason{ReasonSequenceGap},
 			SourceRecordID:          gapSourceRecordID(sequenceResult, message.Sequence),
 			CanonicalEventTime:      resolvedTs.EventTime,
 			TimestampFallbackReason: resolvedTs.FallbackReason,
@@ -150,4 +174,12 @@ func gapSourceRecordID(sequenceResult SequenceResult, sequence int64) string {
 		return fmt.Sprintf("gap:%d-%d", sequenceResult.LastSequence, sequence)
 	}
 	return fmt.Sprintf("gap:unknown-%d", sequence)
+}
+
+func topOfBookSourceRecordID(message OrderBookMessage) string {
+	timestamp := message.ExchangeTs
+	if timestamp == "" {
+		timestamp = message.RecvTs
+	}
+	return "ticker:" + timestamp
 }

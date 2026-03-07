@@ -33,8 +33,9 @@
       "marketType": "spot",
       "exchangeTs": "2026-03-06T12:02:00.000Z",
       "recvTs": "2026-03-06T12:02:12.500Z",
-      "timestampStatus": "normal",
+      "timestampStatus": "degraded",
       "feedHealthState": "STALE",
+      "degradationReasons": ["message-stale"],
       "sourceRecordId": "heartbeat:2026-03-06T12:02:00.000Z"
     }
   ]

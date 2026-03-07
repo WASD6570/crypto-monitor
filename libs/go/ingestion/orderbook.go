@@ -5,17 +5,19 @@ import "fmt"
 type BookUpdateKind string
 
 const (
-	BookUpdateSnapshot BookUpdateKind = "snapshot"
-	BookUpdateDelta    BookUpdateKind = "delta"
+	BookUpdateSnapshot  BookUpdateKind = "snapshot"
+	BookUpdateDelta     BookUpdateKind = "delta"
+	BookUpdateTopOfBook BookUpdateKind = "top-of-book"
 )
 
 type SequenceAction string
 
 const (
-	SequenceAcceptedSnapshot SequenceAction = "accepted-snapshot"
-	SequenceAcceptedDelta    SequenceAction = "accepted-delta"
-	SequenceIgnoredStale     SequenceAction = "ignored-stale"
-	SequenceRequiresResync   SequenceAction = "requires-resync"
+	SequenceAcceptedSnapshot  SequenceAction = "accepted-snapshot"
+	SequenceAcceptedDelta     SequenceAction = "accepted-delta"
+	SequenceAcceptedTopOfBook SequenceAction = "accepted-top-of-book"
+	SequenceIgnoredStale      SequenceAction = "ignored-stale"
+	SequenceRequiresResync    SequenceAction = "requires-resync"
 )
 
 type SequencedBookUpdate struct {

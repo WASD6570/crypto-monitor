@@ -17,6 +17,7 @@
   "rawMessages": [
     {
       "type": "ticker",
+      "sourceSymbol": "BTC-USD",
       "bestBidPrice": "63999.90",
       "bestBidSize": "1.25",
       "bestAskPrice": "64000.20",
@@ -29,15 +30,16 @@
     {
       "schemaVersion": "v1",
       "eventType": "order-book-top",
+      "bookAction": "top-of-book",
       "symbol": "BTC-USD",
       "sourceSymbol": "BTC-USD",
       "quoteCurrency": "USD",
       "venue": "COINBASE",
       "marketType": "spot",
-      "exchangeTs": "2026-03-06T12:00:01.000Z",
-      "recvTs": "2026-03-06T12:00:01.020Z",
+      "exchangeTs": "2026-03-06T12:00:01Z",
+      "recvTs": "2026-03-06T12:00:01.02Z",
       "timestampStatus": "normal",
-      "sourceRecordId": "ticker:2026-03-06T12:00:01.000Z"
+      "sourceRecordId": "ticker:2026-03-06T12:00:01Z"
     }
   ]
 }

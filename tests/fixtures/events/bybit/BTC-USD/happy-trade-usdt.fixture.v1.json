@@ -1,0 +1,50 @@
+{
+  "fixtureVersion": "v1",
+  "id": "bybit-btc-usdt-happy-trade",
+  "family": "events",
+  "category": "happy-trade",
+  "scenarioClass": "happy-path",
+  "venue": "BYBIT",
+  "symbol": "BTC-USD",
+  "sourceSymbol": "BTCUSDT",
+  "quoteCurrency": "USDT",
+  "targetSchema": "market-trade.v1.schema.json",
+  "purpose": "Validate Bybit trade parsing and canonical trade normalization.",
+  "checks": [
+    "schema-validation",
+    "trade-normalization"
+  ],
+  "rawMessages": [
+    {
+      "topic": "publicTrade.BTCUSDT",
+      "type": "snapshot",
+      "ts": 1772798400180,
+      "data": [
+        {
+          "s": "BTCUSDT",
+          "i": "3001",
+          "S": "Buy",
+          "p": "64000.10",
+          "v": "0.015",
+          "T": 1772798400100
+        }
+      ],
+      "recvTs": "2026-03-06T12:00:00.18Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "market-trade",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTCUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BYBIT",
+      "marketType": "spot",
+      "exchangeTs": "2026-03-06T12:00:00.1Z",
+      "recvTs": "2026-03-06T12:00:00.18Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "trade:3001"
+    }
+  ]
+}

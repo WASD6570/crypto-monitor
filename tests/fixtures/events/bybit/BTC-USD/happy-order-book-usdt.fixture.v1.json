@@ -1,0 +1,73 @@
+{
+  "fixtureVersion": "v1",
+  "id": "bybit-btc-usdt-happy-order-book",
+  "family": "events",
+  "category": "happy-order-book",
+  "scenarioClass": "happy-path",
+  "venue": "BYBIT",
+  "symbol": "BTC-USD",
+  "sourceSymbol": "BTCUSDT",
+  "quoteCurrency": "USDT",
+  "targetSchema": "order-book-top.v1.schema.json",
+  "purpose": "Validate Bybit order-book snapshot and delta normalization.",
+  "checks": [
+    "schema-validation",
+    "book-top-normalization"
+  ],
+  "rawMessages": [
+    {
+      "topic": "orderbook.1.BTCUSDT",
+      "type": "snapshot",
+      "ts": 1772798520000,
+      "data": {
+        "s": "BTCUSDT",
+        "u": 700,
+        "b": [["64020.00", "1.10"]],
+        "a": [["64020.50", "0.80"]]
+      },
+      "recvTs": "2026-03-06T12:02:00.04Z"
+    },
+    {
+      "topic": "orderbook.1.BTCUSDT",
+      "type": "delta",
+      "ts": 1772798520100,
+      "data": {
+        "s": "BTCUSDT",
+        "u": 701,
+        "b": [["64020.10", "1.05"]],
+        "a": [["64020.40", "0.75"]]
+      },
+      "recvTs": "2026-03-06T12:02:00.13Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "order-book-top",
+      "bookAction": "snapshot",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTCUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BYBIT",
+      "marketType": "spot",
+      "exchangeTs": "2026-03-06T12:02:00Z",
+      "recvTs": "2026-03-06T12:02:00.04Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "book:700"
+    },
+    {
+      "schemaVersion": "v1",
+      "eventType": "order-book-top",
+      "bookAction": "delta",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTCUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BYBIT",
+      "marketType": "spot",
+      "exchangeTs": "2026-03-06T12:02:00.1Z",
+      "recvTs": "2026-03-06T12:02:00.13Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "book:701"
+    }
+  ]
+}

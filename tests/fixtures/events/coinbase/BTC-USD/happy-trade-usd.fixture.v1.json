@@ -1,0 +1,44 @@
+{
+  "fixtureVersion": "v1",
+  "id": "coinbase-btc-usd-happy-trade",
+  "family": "events",
+  "category": "happy-trade",
+  "scenarioClass": "happy-path",
+  "venue": "COINBASE",
+  "symbol": "BTC-USD",
+  "sourceSymbol": "BTC-USD",
+  "quoteCurrency": "USD",
+  "targetSchema": "market-trade.v1.schema.json",
+  "purpose": "Validate Coinbase trade parsing and canonical trade normalization.",
+  "checks": [
+    "schema-validation",
+    "trade-normalization"
+  ],
+  "rawMessages": [
+    {
+      "type": "match",
+      "product_id": "BTC-USD",
+      "trade_id": 1001,
+      "price": "64000.10",
+      "size": "0.015",
+      "side": "buy",
+      "time": "2026-03-06T12:00:00.100Z",
+      "recvTs": "2026-03-06T12:00:00.180Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "market-trade",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTC-USD",
+      "quoteCurrency": "USD",
+      "venue": "COINBASE",
+      "marketType": "spot",
+      "exchangeTs": "2026-03-06T12:00:00.1Z",
+      "recvTs": "2026-03-06T12:00:00.18Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "trade:1001"
+    }
+  ]
+}

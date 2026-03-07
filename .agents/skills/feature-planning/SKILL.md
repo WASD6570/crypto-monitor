@@ -6,14 +6,18 @@ compatibility: opencode
 
 ## What I do
 
-- Gather requirements and confirm scope/constraints
+- Gather requirements and confirm scope/constraints for one bounded child feature
 - Ask clarifying questions only when the repo and request do not provide enough context for a safe plan
 - Produce a structured plan with implementation order
-- Write plan artifacts to `plans/{feature_name}/` with overview + implementation steps + testing plan
+- Write active implementation-ready plan artifacts to `plans/{feature_name}/` with overview + implementation steps + testing plan
+- Treat `plans/epics/{epic_name}/` as broad source context that should already be refined before this skill starts
+- Treat `plans/completed/{feature_name}/` as read-only archive for already-finished features
 
 ## When to use me
 
-Use this for any feature that needs a clear, durable plan across agents.
+Use this for a single bounded child feature that needs a clear, durable active plan across agents.
+
+If the input already exists only as a broad epic under `plans/epics/{epic_name}/`, stop and run `program-refining` first.
 
 If the input is a large initiative brief that clearly contains multiple features or workstreams, use `program-planning` first and then return to this skill for each bounded slice.
 
@@ -32,6 +36,8 @@ Plans should preserve the live/research boundary and avoid overdesign.
 2. **Load the relevant parent context first** when the feature comes from a larger initiative:
    - read the relevant initiative docs under `initiatives/{initiative_name}/`
    - read the relevant program docs under `docs/specs/{program_name}/` when product defaults, metrics, or sequencing materially affect the feature
+   - read the relevant epic refinement docs under `plans/epics/{epic_name}/` when this child feature comes from a broader epic
+   - read direct prerequisite history under `plans/completed/{feature_name}/` only when prior finished slices materially constrain the new plan
 3. **Infer as much as possible from the repo first**, then ask only blocking questions:
    - What is the exact problem to solve?
    - What is in scope vs out of scope?
@@ -63,7 +69,8 @@ Plans should preserve the live/research boundary and avoid overdesign.
 
 ## Context Discipline
 
-- Do not read unrelated feature plans under `plans/`.
+- Do not read unrelated feature plans under `plans/`, unrelated epics under `plans/epics/`, or unrelated completed plans under `plans/completed/`.
+- Do not use this skill to decompose an entire epic; that belongs to `program-refining`.
 - Read only the relevant initiative docs under `initiatives/` and relevant program docs under `docs/specs/` for the active feature.
 - Only inspect files required for the current feature being planned.
 - If examples are needed, prefer local conventions in source code/docs rather than opening other feature plan folders.
@@ -99,14 +106,23 @@ Plans should preserve the live/research boundary and avoid overdesign.
 - Specify concrete endpoint, CLI, replay, or job sequence and required inputs.
 - Specify verification checklist for side effects, artifacts, persisted state, and logs as needed.
 - Add replay determinism and Go/Python parity checks when the feature depends on shared algorithms or fixtures.
-- Include expected output artifact path: `plans/{feature_name}/testing-report.md`.
+- Include expected output artifact path: `plans/{feature_name}/testing-report.md` while the feature is active; epics stay in `plans/epics/{epic_name}/` until refined, and completed features are archived later under `plans/completed/{feature_name}/`.
 
 ## Output location
 
-Write plan files to:
+Write implementation-ready plan files to:
 
 ```
 {repo_root}/plans/{feature_name}/
 ```
 
 Use the ordering above and number sequentially for each module.
+
+If the work is still too broad for direct implementation, keep or move that broad context under:
+
+```
+{repo_root}/plans/epics/{epic_name}/
+```
+
+Do not hand an epic directly to `feature-implementing`.
+Do not decompose an epic here when `program-refining` should be used first.

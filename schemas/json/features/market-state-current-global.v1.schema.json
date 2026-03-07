@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/json/features/market-state-current-global.v1.schema.json",
+  "title": "Market State Current Global v1",
+  "type": "object",
+  "required": [
+    "asOf",
+    "version",
+    "global",
+    "symbols",
+    "provenance"
+  ],
+  "properties": {
+    "asOf": { "type": "string", "format": "date-time" },
+    "version": { "type": "object" },
+    "global": { "type": "object" },
+    "symbols": { "type": "array" },
+    "provenance": { "type": "object" }
+  },
+  "additionalProperties": true
+}

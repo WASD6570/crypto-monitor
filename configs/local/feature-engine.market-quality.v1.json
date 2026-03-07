@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "v1",
+  "configVersion": "market-quality.v1",
+  "algorithmVersion": "market-quality-buckets.v1",
+  "timestampSkewSeconds": 2,
+  "families": {
+    "30s": {
+      "intervalSeconds": 30,
+      "watermarkSeconds": 2,
+      "minimumCompleteness": 1.0
+    },
+    "2m": {
+      "intervalSeconds": 120,
+      "watermarkSeconds": 5,
+      "minimumCompleteness": 0.75
+    },
+    "5m": {
+      "intervalSeconds": 300,
+      "watermarkSeconds": 10,
+      "minimumCompleteness": 0.8
+    }
+  },
+  "thresholds": {
+    "divergence": {
+      "30s": {
+        "priceDistanceModerateBps": 2,
+        "priceDistanceSevereBps": 8,
+        "coverageGapModerate": 0.2,
+        "coverageGapSevere": 0.4,
+        "timestampFallbackRatioCap": 0.2
+      },
+      "2m": {
+        "priceDistanceModerateBps": 3,
+        "priceDistanceSevereBps": 10,
+        "coverageGapModerate": 0.2,
+        "coverageGapSevere": 0.4,
+        "timestampFallbackRatioCap": 0.2
+      },
+      "5m": {
+        "priceDistanceModerateBps": 4,
+        "priceDistanceSevereBps": 12,
+        "coverageGapModerate": 0.2,
+        "coverageGapSevere": 0.4,
+        "timestampFallbackRatioCap": 0.2
+      }
+    },
+    "quality": {
+      "concentrationSoftCap": 0.7,
+      "moderateCap": 0.65,
+      "severeCap": 0.35,
+      "timestampTrustCap": 0.55,
+      "incompleteCap": 0.6
+    }
+  }
+}

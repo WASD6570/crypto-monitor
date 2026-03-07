@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/json/replay/replay-compare-summary.v1.schema.json",
+  "title": "Replay Compare Summary v1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schemaVersion",
+    "runId",
+    "comparedTargetId",
+    "changedArtifactCount",
+    "unchangedCount",
+    "driftClassification",
+    "artifactDigests",
+    "auditOnly"
+  ],
+  "properties": {
+    "schemaVersion": {"const": "v1"},
+    "runId": {"type": "string", "minLength": 1},
+    "comparedTargetId": {"type": "string", "minLength": 1},
+    "changedArtifactCount": {"type": "integer", "minimum": 0},
+    "firstMismatch": {"type": "string"},
+    "unchangedCount": {"type": "integer", "minimum": 0},
+    "driftClassification": {"type": "string", "enum": ["match", "drift"]},
+    "artifactDigests": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"type": "string", "minLength": 1}
+    },
+    "auditOnly": {"type": "boolean"}
+  }
+}

@@ -31,9 +31,35 @@
 
 ## First Recommended Next Step
 
-Run `feature-planning` for the first slice inside initiative 1:
+Completed initiative-1 slices already archived:
 
-- `canonical-contracts-and-fixtures`
+- `plans/completed/canonical-contracts-and-fixtures/`
+- `plans/completed/market-ingestion-and-feed-health/`
+- `plans/completed/raw-event-log-boundary/`
+- `plans/completed/dashboard-shell-and-summary-strip/`
+- `plans/completed/replay-run-manifests-and-ordering/`
+- `plans/completed/world-usa-composite-snapshots/`
+- `plans/completed/backfill-checkpoints-and-audit-trail/`
+- `plans/completed/market-quality-and-divergence-buckets/`
+- `plans/completed/replay-retention-and-safety-validation/`
+- `plans/completed/raw-storage-and-replay-foundation/`
+- `plans/completed/symbol-and-global-regime-state/`
+- `plans/completed/market-state-current-query-contracts/`
+- `plans/completed/dashboard-query-adapters-and-trust-state/`
+- `plans/completed/market-state-history-and-audit-reads/`
+- `plans/completed/dashboard-detail-panels-and-symbol-switching/`
+
+Run `feature-planning` for the next active child feature inside initiative 1:
+
+- `dashboard-negative-state-mobile-a11y`
+
+Source refinement handoff:
+
+- `plans/epics/visibility-dashboard-core/92-refinement-handoff.md`
+
+Parallel-safe follow-up child feature after that:
+
+- `feature-planning` for `dashboard-fixture-smoke-matrix` once negative-state/mobile behavior is bounded
 
 Do not start initiative 2 feature planning until initiative 1 has at least:
 

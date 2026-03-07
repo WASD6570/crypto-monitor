@@ -25,6 +25,13 @@
     "venue-bar-2m.v1.schema.json",
     "venue-bar-5m.v1.schema.json",
     "composite-market-state.v1.schema.json",
-    "feed-health-state.v1.schema.json"
+    "feed-health-state.v1.schema.json",
+    "market-state-current-symbol.v1.schema.json",
+    "market-state-current-global.v1.schema.json",
+    "market-state-current-response.v1.schema.json",
+    "market-state-recent-context.v1.schema.json",
+    "market-state-history-symbol.v1.schema.json",
+    "market-state-history-global.v1.schema.json",
+    "market-state-audit-provenance.v1.schema.json"
   ]
 }

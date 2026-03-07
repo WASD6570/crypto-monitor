@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/json/replay/replay-run-manifest.v1.schema.json",
+  "title": "Replay Run Manifest v1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schemaVersion",
+    "runId",
+    "requestDigest",
+    "scope",
+    "runtimeMode",
+    "status",
+    "orderingPolicyId",
+    "rawPartitions",
+    "configSnapshot",
+    "contractVersions",
+    "build",
+    "initiator"
+  ],
+  "properties": {
+    "schemaVersion": {"const": "v1"},
+    "runId": {"type": "string", "minLength": 1},
+    "requestDigest": {"type": "string", "minLength": 1},
+    "scope": {
+      "type": "object",
+      "required": ["symbol", "venues", "windowStart", "windowEnd"],
+      "properties": {
+        "symbol": {"type": "string", "minLength": 1},
+        "venues": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "streamFamilies": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "windowStart": {"type": "string", "format": "date-time"},
+        "windowEnd": {"type": "string", "format": "date-time"}
+      }
+    },
+    "runtimeMode": {"type": "string", "enum": ["inspect", "rebuild", "compare"]},
+    "status": {"type": "string", "enum": ["planned", "running", "completed", "failed"]},
+    "orderingPolicyId": {"type": "string", "minLength": 1},
+    "rawPartitions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["schemaVersion", "logicalPartition", "location", "entryCount", "continuityChecksum"],
+        "properties": {
+          "schemaVersion": {"const": "v1"},
+          "logicalPartition": {"type": "string", "minLength": 1},
+          "location": {"type": "string", "minLength": 1},
+          "entryCount": {"type": "integer", "minimum": 0},
+          "firstCanonicalEventId": {"type": "string"},
+          "lastCanonicalEventId": {"type": "string"},
+          "continuityChecksum": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "configSnapshot": {
+      "$ref": "#/$defs/snapshotRef"
+    },
+    "contractVersions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/snapshotRef"}
+    },
+    "build": {
+      "type": "object",
+      "required": ["service"],
+      "properties": {
+        "service": {"type": "string", "minLength": 1},
+        "gitSha": {"type": "string"},
+        "releaseId": {"type": "string"},
+        "buildTimestamp": {"type": "string"},
+        "featureFlagDigest": {"type": "string"}
+      }
+    },
+    "initiator": {
+      "type": "object",
+      "required": ["actor", "reasonCode", "requestedAt"],
+      "properties": {
+        "actor": {"type": "string", "minLength": 1},
+        "reasonCode": {"type": "string", "minLength": 1},
+        "requestedAt": {"type": "string", "format": "date-time"}
+      }
+    }
+  },
+  "$defs": {
+    "snapshotRef": {
+      "type": "object",
+      "required": ["schemaVersion", "kind", "id", "digest"],
+      "properties": {
+        "schemaVersion": {"const": "v1"},
+        "kind": {"type": "string", "minLength": 1},
+        "id": {"type": "string", "minLength": 1},
+        "version": {"type": "string"},
+        "digest": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

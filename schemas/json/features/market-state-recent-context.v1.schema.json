@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/json/features/market-state-recent-context.v1.schema.json",
+  "title": "Market State Recent Context v1",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "thirtySeconds",
+    "twoMinutes",
+    "fiveMinutes"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "thirtySeconds": { "type": "object" },
+    "twoMinutes": { "type": "object" },
+    "fiveMinutes": { "type": "object" }
+  },
+  "additionalProperties": true
+}

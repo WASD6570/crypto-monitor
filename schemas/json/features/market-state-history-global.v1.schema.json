@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/json/features/market-state-history-global.v1.schema.json",
+  "title": "Market State History Global v1",
+  "type": "object",
+  "required": [
+    "lookup",
+    "availability",
+    "audit"
+  ],
+  "properties": {
+    "lookup": { "type": "object" },
+    "availability": { "type": "object" },
+    "state": { "type": "object" },
+    "audit": { "$ref": "market-state-audit-provenance.v1.schema.json" }
+  },
+  "additionalProperties": true
+}

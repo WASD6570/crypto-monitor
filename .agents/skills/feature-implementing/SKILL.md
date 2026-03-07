@@ -22,17 +22,20 @@ Repo-specific operating assumptions:
 
 ## When to use me
 
-Use this after `feature-planning` has produced a plan in `plans/{feature_name}/`.
+Use this after `feature-planning` has produced an active plan in `plans/{feature_name}/`.
 
 ## How I work
 
 ### 0) Locate plan + load overview (required)
-1. Locate the plan for the feature name in `plans/{feature_name}/`.
-2. Always load `00-overview.md` before any step to understand flow, design, and requirements.
-3. Load only the relevant initiative docs under `initiatives/{initiative_name}/` when the feature belongs to a larger initiative:
-   - at minimum, read the matching initiative `00-overview.md`
-   - read the relevant slice entry from the initiative `03-handoff.md`
-4. Load only the relevant program docs under `docs/specs/{program_name}/` when they materially affect the feature:
+1. Locate the active plan for the feature name in `plans/{feature_name}/`.
+2. If the feature only exists in `plans/epics/{feature_name}/`, stop and refine it with `program-refining`, then `feature-planning`, before implementing.
+3. If the feature only exists in `plans/completed/{feature_name}/`, treat it as already completed historical context and do not restart implementation unless the user explicitly asks.
+4. Always load `00-overview.md` before any step to understand flow, design, and requirements.
+5. If the active plan came from an epic, load only the relevant refinement docs from `plans/epics/{epic_name}/`.
+6. Load only the relevant initiative docs under `initiatives/{initiative_name}/` when the feature belongs to a larger initiative:
+    - at minimum, read the matching initiative `00-overview.md`
+    - read the relevant slice entry from the initiative `03-handoff.md`
+7. Load only the relevant program docs under `docs/specs/{program_name}/` when they materially affect the feature:
    - success metrics
    - operating defaults
    - handoff or ordering constraints
@@ -48,7 +51,9 @@ Use this after `feature-planning` has produced a plan in `plans/{feature_name}/`
 
 ### 1.1) Task relevance check (required)
 - Use the built-in task tracker as the execution queue for the active session.
-- `plans/{feature_name}/` files are durable plan artifacts, not required execution checklists.
+- `plans/epics/{feature_name}/` is broad context only and must be refined before execution.
+- `plans/{feature_name}/` files are durable active plan artifacts, not required execution checklists.
+- `plans/completed/{feature_name}/` is read-only history for prerequisite context and prior testing evidence.
 
 ### 2) Feature-driving: create / maintain task queue (required)
 For the current step file:

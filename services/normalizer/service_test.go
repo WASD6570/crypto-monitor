@@ -157,6 +157,59 @@ func TestServiceNormalizeFeedHealthPreservesDegradationMetadata(t *testing.T) {
 	}
 }
 
+func TestNormalizerRawWriteBoundary(t *testing.T) {
+	writer := ingestion.NewInMemoryRawEventWriter()
+	service, err := NewService(
+		ingestion.StrictTimestampPolicy(),
+		WithRawEventWriter(writer, ingestion.RawWriteOptions{
+			NormalizerService: "services/normalizer",
+			BuildVersion:      "test-build",
+		}),
+	)
+	if err != nil {
+		t.Fatalf("new service: %v", err)
+	}
+
+	fixture := loadFixture(t, "tests/fixtures/events/coinbase/BTC-USD/happy-trade-usd.fixture.v1.json")
+	recvTime := mustRecvTime(t, fixture.RawMessages[0])
+	parsed, err := venuecoinbase.ParseTradeEvent(fixture.RawMessages[0], recvTime)
+	if err != nil {
+		t.Fatalf("parse trade event: %v", err)
+	}
+
+	_, err = service.NormalizeTrade(TradeInput{
+		Metadata: ingestion.TradeMetadata{
+			Symbol:        fixture.Symbol,
+			SourceSymbol:  parsed.SourceSymbol,
+			QuoteCurrency: fixture.QuoteCurrency,
+			Venue:         ingestion.VenueCoinbase,
+			MarketType:    "spot",
+		},
+		Message: parsed.Message,
+		Raw: ingestion.RawWriteContext{
+			ConnectionRef: "coinbase-ws-1",
+			SessionRef:    "session-1",
+		},
+	})
+	if err != nil {
+		t.Fatalf("normalize trade with raw writer: %v", err)
+	}
+
+	entries := writer.Entries()
+	if len(entries) != 1 {
+		t.Fatalf("raw entry count = %d, want 1", len(entries))
+	}
+	if entries[0].NormalizerService != "services/normalizer" {
+		t.Fatalf("normalizer service = %q, want %q", entries[0].NormalizerService, "services/normalizer")
+	}
+	if entries[0].BuildVersion != "test-build" {
+		t.Fatalf("build version = %q, want %q", entries[0].BuildVersion, "test-build")
+	}
+	if entries[0].ConnectionRef != "coinbase-ws-1" || entries[0].SessionRef != "session-1" {
+		t.Fatalf("ingest provenance = (%q, %q), want (%q, %q)", entries[0].ConnectionRef, entries[0].SessionRef, "coinbase-ws-1", "session-1")
+	}
+}
+
 func newService(t *testing.T) *Service {
 	t.Helper()
 	service, err := NewService(ingestion.StrictTimestampPolicy())

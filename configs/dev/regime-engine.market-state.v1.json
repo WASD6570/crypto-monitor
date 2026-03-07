@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "v1",
+  "configVersion": "regime-engine.market-state.v1",
+  "algorithmVersion": "symbol-global-regime.v1",
+  "symbols": ["BTC-USD", "ETH-USD"],
+  "symbol": {
+    "coverageWatchMax": 0.85,
+    "coverageNoOperateMax": 0.60,
+    "combinedTrustCapWatchMax": 0.65,
+    "combinedTrustCapNoOperateMax": 0.35,
+    "timestampFallbackWatchRatio": 0.10,
+    "timestampFallbackNoOperateRatio": 0.50,
+    "noOperateToWatchWindows": 2,
+    "watchToTradeableWindows": 2
+  },
+  "global": {
+    "noOperateToWatchWindows": 2,
+    "watchToTradeableWindows": 2
+  }
+}

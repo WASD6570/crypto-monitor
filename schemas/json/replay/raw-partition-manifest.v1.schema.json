@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/json/replay/raw-partition-manifest.v1.schema.json",
+  "title": "Raw Partition Manifest v1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schemaVersion",
+    "logicalPartition",
+    "storageState",
+    "location",
+    "hotRetentionUntil",
+    "coldRetentionUntil",
+    "entryCount",
+    "firstCanonicalEventId",
+    "lastCanonicalEventId",
+    "continuityChecksum"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "v1"
+    },
+    "logicalPartition": {
+      "type": "object",
+      "required": ["utcDate", "symbol", "venue"],
+      "properties": {
+        "utcDate": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "symbol": {
+          "type": "string",
+          "enum": ["BTC-USD", "ETH-USD"]
+        },
+        "venue": {
+          "type": "string",
+          "enum": ["BINANCE", "BYBIT", "COINBASE", "KRAKEN"]
+        },
+        "streamFamily": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "storageState": {
+      "type": "string",
+      "enum": ["hot", "cold", "transition"]
+    },
+    "location": {
+      "type": "string",
+      "minLength": 1
+    },
+    "hotRetentionUntil": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "coldRetentionUntil": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "entryCount": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "firstCanonicalEventId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "lastCanonicalEventId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "continuityChecksum": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

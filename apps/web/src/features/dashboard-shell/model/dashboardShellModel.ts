@@ -1,0 +1,81 @@
+export type DashboardTrustState = 'loading' | 'ready' | 'stale' | 'degraded' | 'unavailable'
+export type DashboardSymbol = 'BTC-USD' | 'ETH-USD'
+export type DashboardSectionKey = 'overview' | 'microstructure' | 'derivatives' | 'health'
+
+export type DashboardSummary = {
+  symbol: DashboardSymbol
+  stateLabel: string
+  trustState: DashboardTrustState
+  reasons: string[]
+  lastUpdated: string
+  freshnessLabel: string
+  comparisonLabel: string
+  timestampNote?: string
+}
+
+export type DashboardSectionState = {
+  key: DashboardSectionKey
+  title: string
+  status: DashboardTrustState
+  note: string
+  reasons: string[]
+}
+
+export type DashboardPanelMetric = {
+  label: string
+  value: string
+}
+
+export type DashboardFocusedPanel = {
+  key: DashboardSectionKey
+  title: string
+  eyebrow?: string
+  trustState: DashboardTrustState
+  summary: string
+  metrics: DashboardPanelMetric[]
+  reasons: string[]
+  note?: string
+}
+
+export type DashboardViewModel = {
+  asOf: string
+  oldestAgeLabel: string
+  configVersion: string
+  algorithmVersion: string
+  trustState: DashboardTrustState
+  degradedNotes: string[]
+  isRefreshing: boolean
+  lastSuccessLabel?: string
+  summaries: Record<DashboardSymbol, DashboardSummary>
+  focusedPanels: Record<DashboardSectionKey, DashboardFocusedPanel>
+  sections: Record<DashboardSectionKey, DashboardSectionState>
+}
+
+export type DashboardFixture = DashboardViewModel
+
+export const DASHBOARD_SYMBOLS: DashboardSymbol[] = ['BTC-USD', 'ETH-USD']
+export const DASHBOARD_SECTIONS: DashboardSectionKey[] = [
+  'overview',
+  'microstructure',
+  'derivatives',
+  'health',
+]
+
+const validSymbolSet = new Set<DashboardSymbol>(DASHBOARD_SYMBOLS)
+const validSectionSet = new Set<DashboardSectionKey>(DASHBOARD_SECTIONS)
+
+export function normalizeDashboardSymbol(value: string | null | undefined): DashboardSymbol {
+  if (value && validSymbolSet.has(value as DashboardSymbol)) {
+    return value as DashboardSymbol
+  }
+
+  return 'BTC-USD'
+}
+
+export function normalizeDashboardSection(value: string | null | undefined): DashboardSectionKey {
+  if (value && validSectionSet.has(value as DashboardSectionKey)) {
+    return value as DashboardSectionKey
+  }
+
+  return 'overview'
+}

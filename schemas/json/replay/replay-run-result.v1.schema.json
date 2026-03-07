@@ -6,33 +6,73 @@
   "additionalProperties": true,
   "required": [
     "schemaVersion",
-    "id",
-    "seedId",
-    "symbol",
+    "runId",
     "status",
-    "outputChecksum"
+    "inputCounters",
+    "startedAt",
+    "finishedAt",
+    "manifestDigest"
   ],
   "properties": {
     "schemaVersion": {
       "const": "v1"
     },
-    "id": {
+    "runId": {
       "type": "string",
       "minLength": 1
-    },
-    "seedId": {
-      "type": "string",
-      "minLength": 1
-    },
-    "symbol": {
-      "type": "string",
-      "enum": ["BTC-USD", "ETH-USD"]
     },
     "status": {
       "type": "string",
-      "enum": ["success", "failed"]
+      "enum": ["completed", "failed"]
     },
-    "outputChecksum": {
+    "failureCategory": {
+      "type": "string"
+    },
+    "inputCounters": {
+      "type": "object",
+      "required": ["partitions", "events", "duplicates", "lateEvents", "degradedTimestampEvents"],
+      "properties": {
+        "partitions": {"type": "integer", "minimum": 0},
+        "events": {"type": "integer", "minimum": 0},
+        "duplicates": {"type": "integer", "minimum": 0},
+        "lateEvents": {"type": "integer", "minimum": 0},
+        "degradedTimestampEvents": {"type": "integer", "minimum": 0}
+      }
+    },
+    "outputDigest": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifactRefs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "namespace", "digest"],
+        "properties": {
+          "kind": {"type": "string", "minLength": 1},
+          "namespace": {"type": "string", "minLength": 1},
+          "digest": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "comparisonSummaryRef": {
+      "type": "object",
+      "required": ["kind", "namespace", "digest"],
+      "properties": {
+        "kind": {"type": "string", "minLength": 1},
+        "namespace": {"type": "string", "minLength": 1},
+        "digest": {"type": "string", "minLength": 1}
+      }
+    },
+    "startedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "finishedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "manifestDigest": {
       "type": "string",
       "minLength": 1
     }

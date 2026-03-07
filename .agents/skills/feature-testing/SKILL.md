@@ -20,9 +20,11 @@ Use this after implementation to validate that a feature works in real condition
 1. Feature implementation is already present in the branch.
 2. The relevant target is reachable or runnable (API, web app, CLI job, replay runner, batch job, or script).
 3. Test inputs are available (fixture payloads, IDs, signatures, tokens, symbols, date ranges, config files, etc.).
-4. If helper assets exist (for example `plans/{feature_name}/test-helpers/`), validate them against the specific flow before running tests.
+4. If helper assets exist (for example `plans/{feature_name}/test-helpers/` or `plans/completed/{feature_name}/test-helpers/`), validate them against the specific flow before running tests.
 
 If required credentials are missing, stop and report exactly what is needed.
+
+Do not run this skill directly against an epic in `plans/epics/{epic_name}/`; epics must go through `program-refining`, `feature-planning`, and implementation first.
 
 ## How I work
 
@@ -31,7 +33,7 @@ If required credentials are missing, stop and report exactly what is needed.
 Before execution, determine what this exact test run needs:
 
 1. Infer required inputs from the feature flow itself by checking handlers, services, routes, jobs, fixtures, contracts, and docs.
-2. If helper assets exist (for example `plans/{feature_name}/test-helpers/` or feature-local helper files), parse and validate them against that inferred checklist.
+2. If helper assets exist (for example `plans/{feature_name}/test-helpers/`, `plans/completed/{feature_name}/test-helpers/`, or feature-local helper files), parse and validate them against that inferred checklist.
 3. For env-like files, confirm required keys are present and non-empty; do not assume fixed key names across features.
 4. If required tooling is missing (for example signature generators, request scripts, payload builders), search for existing scripts first; if none exist, create minimal local tooling for the test and document how it is used.
 5. If any required input cannot be inferred or generated safely, stop and ask for an explicit missing-items checklist (keys/files/passphrases/scripts/IDs).
@@ -39,13 +41,13 @@ Before execution, determine what this exact test run needs:
 
 ### 1) Load feature context first
 
-1. Read `plans/{feature_name}/00-overview.md`.
+1. Read `plans/{feature_name}/00-overview.md`; if the feature has already been archived, read `plans/completed/{feature_name}/00-overview.md` instead. If it exists only under `plans/epics/{epic_name}/`, stop and request refinement first.
 2. Extract the concrete user journeys and endpoint sequence to test.
 3. Use the current handoff context as the primary source for smoke setup when it is available.
 
 Context relevance rules:
 
-- Do not read unrelated `plans/{other_feature}` files.
+- Do not read unrelated `plans/{other_feature}`, `plans/epics/{other_epic}`, or `plans/completed/{other_feature}` files.
 - Use built-in task context for current-session execution details rather than repo task files.
 
 ### 2) Build a minimal smoke matrix
@@ -82,9 +84,10 @@ Validate at least:
 
 ### 5) Write test report artifacts
 
-Write a concise report to:
+Write a concise report to the same feature-plan folder that supplied the test context:
 
-`plans/{feature_name}/testing-report.md`
+- active feature: `plans/{feature_name}/testing-report.md`
+- archived feature: `plans/completed/{feature_name}/testing-report.md`
 
 Include:
 

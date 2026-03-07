@@ -14,4 +14,10 @@ Planned structure:
 - `src/hooks`: shared React hooks
 - `src/utils`: general utilities
 
-This folder is intentionally scaffold-only for now.
+Current implemented slice:
+
+- fixture-backed `dashboard-shell-and-summary-strip` route at `/dashboard`
+- Vite + React + TypeScript app scaffold
+- unit tests and Playwright smoke spec for the dashboard shell
+
+Live query adapters, detailed market panels, and replay-aware UI work remain planned follow-on slices.

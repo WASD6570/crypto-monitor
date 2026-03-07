@@ -49,15 +49,40 @@ Initiative docs answer:
 - which feature slices belong to the initiative
 - what depends on what
 - which slices are safe to plan in parallel
-- which feature should be planned next
+- which epic should be refined next
+
+### Epic Plans
+
+Location:
+
+- `plans/epics/{epic_name}/`
+
+Use epic plans for broad work that is still too large for direct implementation.
+
+Expected files:
+
+- existing broad context such as `00-overview.md` and any inherited implementation/testing docs
+- `90-refinement-map.md`
+- `91-child-plan-seeds.md`
+- `92-refinement-handoff.md`
+
+Epic plans answer:
+
+- what is already done
+- what is still missing
+- which child feature plans should be created next
+- which child slices are safe to refine or plan in parallel
+- what still blocks direct implementation
 
 ### Feature Plans
 
 Location:
 
-- `plans/{feature_name}/`
+- epic / too large: `plans/epics/{epic_name}/`
+- active: `plans/{feature_name}/`
+- completed archive: `plans/completed/{feature_name}/`
 
-Use feature plans for implementation-ready work.
+Use epic plans for broad work that still needs refinement. Use active feature plans for implementation-ready work. Move active plans to `plans/completed/{feature_name}/` after implementation and validation are finished.
 
 Expected files:
 
@@ -73,6 +98,12 @@ Feature plans answer:
 - in what order
 - how to validate it
 - what constraints matter for this specific feature
+
+Epic plans answer:
+
+- what still needs refinement
+- which child plans should be created next
+- which dependencies or decisions block direct implementation
 
 ## Recommended Workflow
 
@@ -91,26 +122,40 @@ Use `program-planning` when the input is large enough that you must first decide
 - create initiative docs under `initiatives/`
 - create a standard `Planning Waves` section in each initiative `03-handoff.md`
 
-### 2. Use `feature-planning` Per Feature
+### 2. Use `program-refining` Per Epic
 
-Once an initiative exists, use `feature-planning` for each slice under that initiative.
+Once an initiative exists and broad slices live under `plans/epics/`, use `program-refining` for each epic that still needs decomposition.
+
+The refiner should read:
+
+- the relevant initiative `00-overview.md`
+- the relevant entry and wave info in initiative `03-handoff.md`
+- the relevant epic under `plans/epics/{epic_name}/`
+- only the relevant program docs sections when they materially affect the epic
+
+Then it should write or update refinement artifacts under `plans/epics/{epic_name}/`.
+
+### 3. Use `feature-planning` Per Child Feature
+
+Once an epic has bounded child slices, use `feature-planning` for each child feature.
 
 The feature planner should read:
 
 - the relevant initiative `00-overview.md`
 - the relevant entry and wave info in initiative `03-handoff.md`
+- the relevant epic refinement docs under `plans/epics/{epic_name}/`
 - only the relevant program docs sections when they materially affect the feature
 
-Then it should write the feature plan under `plans/{feature_name}/`.
+Then it should read any relevant epic under `plans/epics/{epic_name}/` and write the active feature plan under `plans/{feature_name}/`.
 
-### 3. Use Parallel Planning In Waves
+### 4. Use Parallel Refinement And Planning In Waves
 
-When dependencies allow, use OpenCode subagents to plan multiple features in parallel.
+When dependencies allow, use OpenCode subagents to refine multiple epics in parallel and then plan multiple bounded child features in parallel.
 
 Safe pattern:
 
-- Wave 1: prerequisites
-- Wave 2: independent consumers of those prerequisites
+- Wave 1: prerequisite epics
+- Wave 2: bounded child features from stabilized epics
 - Wave 3: dependent follow-ons
 
 Do not parallel-plan features that still depend on unresolved:
@@ -124,9 +169,9 @@ Do not parallel-plan features that still depend on unresolved:
 
 Every initiative handoff should contain:
 
-1. `Feature Queue`
+1. `Epic Queue`
 2. `Planning Waves`
-3. `Child Plan Seeds`
+3. `Epic Seeds`
 4. `Open Questions That Still Matter` if needed
 
 The `Planning Waves` section should make it obvious:
@@ -143,14 +188,17 @@ Before implementation, load in this order:
 
 1. `plans/{feature_name}/00-overview.md`
 2. the current step file in `plans/{feature_name}/`
-3. the parent initiative `initiatives/{initiative_name}/00-overview.md`
-4. the relevant slice and wave from `initiatives/{initiative_name}/03-handoff.md`
-5. the relevant program docs sections from `docs/specs/{program_name}/`, usually:
-   - `02-product-success.md`
-   - `03-operating-defaults.md`
-   - `04-handoff.md` when sequencing matters
+3. if relevant, the parent epic refinement handoff in `plans/epics/{epic_name}/92-refinement-handoff.md`
+4. the parent initiative `initiatives/{initiative_name}/00-overview.md`
+5. the relevant slice and wave from `initiatives/{initiative_name}/03-handoff.md`
+6. the relevant program docs sections from `docs/specs/{program_name}/`, usually:
+    - `02-product-success.md`
+    - `03-operating-defaults.md`
+    - `04-handoff.md` when sequencing matters
 
 Do not load the whole program or all initiative docs unless the feature actually depends on them.
+Do not implement directly from `plans/epics/{epic_name}/`; refine epics into active plans first.
+Read archived prerequisite plans under `plans/completed/` only when they directly constrain the active feature.
 
 ## OpenCode-Specific Guidance
 

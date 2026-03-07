@@ -42,8 +42,8 @@ Within 60 seconds, the user should be able to answer:
 
 ## Ordered Slice Queue
 
-1. `canonical-contracts-and-fixtures`
-2. `market-ingestion-and-feed-health`
+1. `canonical-contracts-and-fixtures` (completed; archived under `plans/completed/canonical-contracts-and-fixtures/`)
+2. `market-ingestion-and-feed-health` (completed; archived under `plans/completed/market-ingestion-and-feed-health/`)
 3. `raw-storage-and-replay-foundation`
 4. `world-usa-composites-and-market-state`
 5. `visibility-dashboard-core`

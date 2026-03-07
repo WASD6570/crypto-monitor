@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/json/features/market-state-current-symbol.v1.schema.json",
+  "title": "Market State Current Symbol v1",
+  "type": "object",
+  "required": [
+    "symbol",
+    "asOf",
+    "version",
+    "composite",
+    "buckets",
+    "regime",
+    "recentContext",
+    "provenance"
+  ],
+  "properties": {
+    "symbol": { "type": "string" },
+    "asOf": { "type": "string", "format": "date-time" },
+    "version": { "type": "object" },
+    "composite": { "type": "object" },
+    "buckets": { "type": "object" },
+    "regime": { "type": "object" },
+    "recentContext": { "type": "object" },
+    "provenance": { "type": "object" }
+  },
+  "additionalProperties": true
+}

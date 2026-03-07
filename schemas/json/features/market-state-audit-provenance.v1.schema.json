@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/json/features/market-state-audit-provenance.v1.schema.json",
+  "title": "Market State Audit Provenance v1",
+  "type": "object",
+  "required": [
+    "lookup",
+    "status",
+    "authoritativeLineage"
+  ],
+  "properties": {
+    "lookup": { "type": "object" },
+    "status": { "type": "string" },
+    "correctionCause": { "type": "string" },
+    "reasonCodes": { "type": "array", "items": { "type": "string" } },
+    "authoritativeLineage": { "$ref": "../replay/market-state-audit-lineage.v1.schema.json" },
+    "supersededLineage": { "$ref": "../replay/market-state-audit-lineage.v1.schema.json" }
+  },
+  "additionalProperties": true
+}

@@ -56,7 +56,7 @@ Repository structure principles:
   - `schemas/json/simulation`
 - Do not invent or fill in concrete schemas just because a high-level brief mentions them.
 - If a task changes a shared contract, update the affected fixtures, docs, and consumer validation for the touched languages.
-- If a change requires rollout sequencing, backfills, replay compatibility work, or migration planning, escalate to `feature-planning`.
+- If a change requires rollout sequencing, backfills, replay compatibility work, or migration planning, escalate to the planning flow: `program-planning`, `program-refining`, or `feature-planning` depending on scope.
 
 ## Skill Routing (Always Available)
 
@@ -66,6 +66,7 @@ The following local skills are available under `.agents/skills/` and should be l
 
 - `frontend-design`
 - `program-planning`
+- `program-refining`
 - `feature-planning`
 - `feature-implementing`
 - `feature-testing`
@@ -74,24 +75,27 @@ The following local skills are available under `.agents/skills/` and should be l
 Routing rules:
 
 - Use `frontend-design` for new or updated UI work in `apps/web`, especially dashboards, charts, alert views, and data-heavy screens.
-- Use `program-planning` when a large brief contains multiple initiatives, features, workstreams, or rollout concerns that should be decomposed before feature-level planning.
-- Use `feature-planning` when work exceeds one micro task, spans apps/services/libs, changes contracts, or needs rollout/backfill/replay sequencing.
+- Use `program-planning` when a large brief contains multiple initiatives, features, workstreams, or rollout concerns that should be decomposed before epic refinement.
+- Use `program-refining` when work starts from `plans/epics/` or when a broad slice must be decomposed into bounded child features before active planning.
+- Use `feature-planning` when one bounded child feature is identified and needs an implementation-ready plan under `plans/`.
 - Use `feature-implementing` only after a plan exists in `plans/{feature_name}/`.
 - Use `feature-testing` after implementation to run smoke, integration, replay, parity, or side-effect checks.
 - Use `web-design-guidelines` when auditing UI, UX, or accessibility quality against the embedded local guideline set.
 
 Execution order for non-micro feature work:
 
-1. `feature-planning`
-2. `feature-implementing`
-3. `feature-testing`
+1. `program-planning`
+2. `program-refining`
+3. `feature-planning`
+4. `feature-implementing`
+5. `feature-testing`
 
 Skill interaction rules:
 
 - Keep micro-implementing as the default unless escalation is triggered.
 - If escalated, follow the skill flow above and keep task state and handoff context updated.
-- For initiative-scale briefs, run `program-planning` first, let it decide whether the work should become one initiative or many, write initiative artifacts under `initiatives/`, then run `feature-planning` for each decomposed slice under `plans/`.
-- When dependencies allow, use parallel subagents for `feature-planning` waves instead of planning every slice serially.
+- For initiative-scale briefs, run `program-planning` first, let it decide whether the work should become one initiative or many, write initiative artifacts under `initiatives/`, then refine the resulting broad slices under `plans/epics/` with `program-refining` before creating active plans under `plans/`.
+- When dependencies allow, use parallel subagents for `program-refining` waves first, then `feature-planning` waves for already-bounded child slices.
 - When implementing a feature from `plans/{feature_name}/`, read the relevant parts of the parent initiative under `initiatives/` and the relevant program docs under `docs/specs/` before editing.
 - For frontend-heavy feature work, combine the active feature skill with `frontend-design`.
 - For UI audits, run `web-design-guidelines` using its embedded local rule spec.
@@ -210,7 +214,7 @@ No step is considered complete without either:
 All ongoing work must be represented as an explicit task checklist using the built-in task tracker for the current session.
 
 - Keep task state accurate while you work.
-- Use `plans/{feature_name}/` for durable planning artifacts, not execution checklists.
+- Use `plans/epics/{epic_name}/` for durable epic refinement artifacts and `plans/{feature_name}/` for active implementation-ready plans, not execution checklists.
 - When pausing, surface blockers, assumptions, and the next recommended step in the handoff message.
 
 ---
@@ -274,7 +278,7 @@ When pausing or handing off work:
 
 ## Auto-Escalation Rules
 
-The agent MUST stop and request escalation to `feature-planning` if any of the following occur:
+The agent MUST stop and request escalation into the planning flow if any of the following occur:
 
 - More than one app, service, or shared library is involved.
 - A contract rollout, migration, replay, or backfill sequence is required.
@@ -283,6 +287,12 @@ The agent MUST stop and request escalation to `feature-planning` if any of the f
 - More than one micro task is clearly required.
 
 Absent explicit escalation, micro-implementing remains active.
+
+Escalation target defaults:
+
+- use `program-planning` when initiative or program boundaries are still unclear
+- use `program-refining` when the work exists only as a broad epic under `plans/epics/`
+- use `feature-planning` when one bounded child feature is known but lacks an active implementation-ready plan
 
 ---
 

@@ -7,7 +7,7 @@
   "supportedSchemaVersions": [
     "v1"
   ],
-  "purpose": "Deterministic replay seeds, replay windows, and replay result metadata.",
+  "purpose": "Deterministic replay request/control contracts, frozen replay run manifests, checkpoints, compare summaries, audit records, and replay result metadata.",
   "reservedFields": [
     "schemaVersion",
     "symbol",
@@ -20,6 +20,12 @@
   "plannedSchemas": [
     "replay-seed.v1.schema.json",
     "replay-window.v1.schema.json",
-    "replay-run-result.v1.schema.json"
+    "replay-request.v1.schema.json",
+    "replay-checkpoint.v1.schema.json",
+    "replay-audit-record.v1.schema.json",
+    "replay-run-manifest.v1.schema.json",
+    "replay-compare-summary.v1.schema.json",
+    "replay-run-result.v1.schema.json",
+    "market-state-audit-lineage.v1.schema.json"
   ]
 }

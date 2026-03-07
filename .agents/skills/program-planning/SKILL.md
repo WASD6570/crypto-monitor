@@ -1,6 +1,6 @@
 ---
 name: program-planning
-description: Decompose a large brief into program docs, one or more bounded initiatives, and dependency-aware feature-planning waves
+description: Decompose a large brief into program docs, one or more bounded initiatives, and dependency-aware epic-refinement waves
 compatibility: opencode
 ---
 
@@ -10,12 +10,12 @@ compatibility: opencode
 - Separate the brief into a program-level view plus one or more bounded initiatives when needed
 - Decompose each initiative into feature slices, platform tracks, and cross-cutting concerns
 - Identify dependencies, contract touchpoints, replay/backfill risks, rollout sequencing, and safe parallelization opportunities
-- Write durable program docs under `docs/specs/` and initiative plans under `initiatives/`
-- When appropriate, hand off to `feature-planning` in dependency-aware parallel waves using OpenCode's native subagent workflow
+- Write durable program docs under `docs/specs/`, initiative plans under `initiatives/`, and broad epic context under `plans/epics/` when needed
+- When appropriate, hand off to `program-refining` in dependency-aware parallel waves using OpenCode's native subagent workflow
 
 ## When to use me
 
-Use this before `feature-planning` when the input is too large or mixed for a single feature plan, for example:
+Use this before `program-refining` and `feature-planning` when the input is too large or mixed for a single feature plan, for example:
 
 - a long product or architecture brief covering multiple capabilities
 - a roadmap or initiative description that spans several services or apps
@@ -24,10 +24,12 @@ Use this before `feature-planning` when the input is too large or mixed for a si
 
 Do not use this for a single bounded feature. Use `feature-planning` directly in that case.
 
+Do not use this when initiative and epic boundaries already exist and you only need to break one epic into child features. Use `program-refining` then `feature-planning`.
+
 Use this when you need to answer either of these:
 
 - "Is this one initiative or several initiatives?"
-- "Which feature plans can be generated in parallel without drifting on contracts or semantics?"
+- "Which epics should be refined in parallel without drifting on contracts or semantics?"
 
 ## Repo assumptions
 
@@ -79,7 +81,7 @@ If multiple initiatives are created, give each one an explicit, boring name and 
 
 ### 3) Produce bounded slices
 
-Break the initiative into small named slices that can each become a separate feature plan.
+Break the initiative into small named slices that can each become a separate epic for later refinement.
 
 Each slice should have:
 
@@ -117,7 +119,7 @@ For each slice, state:
 - depends on
 - unlocks
 - risk level
-- recommended next skill (`feature-planning`, then later `feature-implementing` and `feature-testing`)
+- recommended next skill (`program-refining`, then `feature-planning`, then later `feature-implementing` and `feature-testing`)
 
 Default to the smallest safe ordering. Prefer reducing dependency chains.
 
@@ -166,22 +168,22 @@ Write these files:
   - contract/replay/backfill/parity risks
   - suggested implementation order
 - `03-handoff.md`
-  - explicit queue of which slice should go through `feature-planning` next
-  - exact feature-plan folder names to create under `plans/{feature_name}/`
+  - explicit queue of which slice should go through `program-refining` next
+  - exact epic folder names to create or refine under `plans/epics/{epic_name}/`
   - which slices are safe to plan in parallel and which are not
   - a standard `Planning Waves` section with `Wave 1`, `Wave 2`, `Wave 3`, ... and the rationale for each wave
-  - any open questions that still block feature-level planning
+  - any open questions that still block epic-level refinement
 
 If useful, also create:
 
 - `04-rollout-notes.md`
 - `05-open-questions.md`
 
-### 7) Prepare child planning inputs
+### 7) Prepare epic refinement inputs
 
-For each slice, create a compact planning seed inside `03-handoff.md` that includes:
+For each slice, create a compact refinement seed inside `03-handoff.md` that includes:
 
-- feature name
+- epic name
 - problem statement
 - in scope
 - out of scope
@@ -189,15 +191,15 @@ For each slice, create a compact planning seed inside `03-handoff.md` that inclu
 - contract/fixture/parity/replay implications
 - likely validation shape
 
-These seeds should be good enough for a later agent to run `feature-planning` without rereading the entire original brief.
+These seeds should be good enough for a later agent to run `program-refining` without rereading the entire original brief.
 
 ### 7.1) Standard handoff format for initiative docs
 
 Every `initiatives/{initiative_name}/03-handoff.md` should contain these sections in this order:
 
-1. `Feature Queue`
+1. `Epic Queue`
 2. `Planning Waves`
-3. `Child Plan Seeds`
+3. `Epic Seeds`
 4. `Open Questions That Still Matter` if needed
 
 The `Planning Waves` section should:
@@ -205,7 +207,7 @@ The `Planning Waves` section should:
 - group slices into dependency-safe planning waves
 - state which slices can be planned in parallel
 - explain why a later wave is blocked on an earlier one
-- identify the first recommended `feature-planning` wave explicitly
+- identify the first recommended `program-refining` wave explicitly
 
 Example shape:
 
@@ -238,20 +240,20 @@ If the user wants decomposition only:
 
 - stop after writing the program and initiative artifacts plus `03-handoff.md`
 
-If the user wants decomposition plus child feature plans:
+If the user wants decomposition plus epic refinement:
 
-- launch multiple `feature-planning` subagents in parallel only for slices whose dependencies are already stable
+- launch multiple `program-refining` subagents in parallel only for slices whose dependencies are already stable
 - do not parallelize slices that still depend on unresolved contract, replay, or state semantics
 - prefer wave-based planning:
-  - wave 1: prerequisites
-  - wave 2: independent consumers of those prerequisites
+  - wave 1: prerequisite epics
+  - wave 2: independent epics that consume those prerequisites
   - wave 3: dependent follow-ons
 - mirror the exact wave names and ordering from `initiatives/{initiative_name}/03-handoff.md`
 
 Each subagent should:
 
-- read only the relevant initiative docs under `initiatives/` and prerequisite feature plans under `plans/`
-- write only to its own `plans/{feature_name}/`
+- read only the relevant initiative docs under `initiatives/`, relevant epics under `plans/epics/`, active prerequisite feature plans under `plans/`, and direct historical prerequisite plans under `plans/completed/` when needed
+- write only to its own `plans/epics/{epic_name}/`
 - return a concise summary of files created and key assumptions
 
 ## Decomposition rules
@@ -260,7 +262,7 @@ Each subagent should:
 - Do not invent concrete schemas, migrations, or business logic from a high-level brief.
 - Separate rollout-sensitive infrastructure from user-facing slices when that reduces risk.
 - Keep names explicit and boring.
-- Do not keep umbrella program docs inside `plans/`; reserve `initiatives/` for real implementation initiatives and `plans/` for feature plans.
+- Do not keep umbrella program docs inside `plans/`; reserve `initiatives/` for real implementation initiatives, `plans/epics/` for broad unfinished slices, `plans/` for active implementation-ready feature plans, and `plans/completed/` for archived finished features.
 - Prefer one plan per independently reviewable capability.
 - If a slice cannot be validated on its own, it is probably not a good slice yet.
 
@@ -273,18 +275,18 @@ A good decomposition should let another agent answer all of these quickly:
 - Which ones require shared contract work?
 - What must happen first?
 - Which slices are safe to plan in parallel?
-- Which slice should go into `feature-planning` next?
+- Which slice should go into `program-refining` next?
 
-## Handoff to feature-planning
+## Handoff to program-refining
 
 After this skill finishes:
 
 1. If needed, read `docs/specs/{program_name}/04-handoff.md` to identify initiative order.
 2. Pick the next highest-priority slice from `initiatives/{initiative_name}/03-handoff.md`.
-3. Run `feature-planning` for that slice.
-4. When dependencies allow, run multiple `feature-planning` agents in parallel for the next safe wave.
-5. Write each feature plan to `plans/{feature_name}/`.
-6. Repeat until the initiative backlog is fully decomposed into feature plans.
+3. Run `program-refining` for that slice.
+4. When dependencies allow, run multiple `program-refining` agents in parallel for the next safe wave.
+5. Write or update broad unfinished slices under `plans/epics/{epic_name}/`.
+6. Repeat until the initiative backlog is fully decomposed into epic refinement artifacts that can feed `feature-planning`.
 
 ## Stop conditions
 

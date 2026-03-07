@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/json/replay/market-state-audit-lineage.v1.schema.json",
+  "title": "Market State Audit Lineage v1",
+  "type": "object",
+  "properties": {
+    "replayRunId": { "type": "string" },
+    "replayManifestRef": { "type": "string" },
+    "artifactIds": { "type": "array", "items": { "type": "string" } },
+    "compositeBucketTs": { "type": "array", "items": { "type": "string", "format": "date-time" } },
+    "bucketRefs": { "type": "array", "items": { "type": "object" } },
+    "symbolBucketEnd": { "type": "string", "format": "date-time" },
+    "globalBucketEnd": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": true
+}

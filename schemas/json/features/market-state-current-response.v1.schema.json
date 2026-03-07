@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/json/features/market-state-current-response.v1.schema.json",
+  "title": "Market State Current Response v1",
+  "allOf": [
+    {
+      "$ref": "market-state-current-symbol.v1.schema.json"
+    }
+  ]
+}

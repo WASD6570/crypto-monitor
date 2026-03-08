@@ -29,6 +29,16 @@ export const DASHBOARD_SCENARIO_NAMES = [
 
 export type DashboardScenarioName = (typeof DASHBOARD_SCENARIO_NAMES)[number]
 
+export const DASHBOARD_SLOW_CONTEXT_SCENARIOS = [
+  'healthy',
+  'delayed',
+  'stale',
+  'partial',
+  'unavailable',
+] as const
+
+export type DashboardSlowContextScenarioName = (typeof DASHBOARD_SLOW_CONTEXT_SCENARIOS)[number]
+
 export type DashboardScenarioMockStep<T> = {
   responses: T[]
   error?: string
@@ -48,10 +58,12 @@ export type DashboardScenarioState = {
 
 type DashboardScenarioClientOptions = {
   baseMs?: number
+  slowContextVariant?: DashboardSlowContextScenarioName
 }
 
 type DashboardScenarioResponseOptions = {
   baseMs?: number
+  slowContextVariant?: DashboardSlowContextScenarioName
 }
 
 const SCENARIO_BASE_RESPONSES: Record<DashboardScenarioName, DashboardResponseSet> = {
@@ -82,10 +94,18 @@ export function createDashboardScenarioResponses(
   name: DashboardScenarioName,
   options?: DashboardScenarioResponseOptions,
 ): DashboardResponseSet {
-  return freshenDashboardResponses(
+  const responses = freshenDashboardResponses(
     structuredClone(SCENARIO_BASE_RESPONSES[name]),
     options?.baseMs ?? DEFAULT_BASE_MS,
   )
+
+  applySlowContextVariant(
+    responses,
+    SCENARIO_FOCUSED_SYMBOL[name],
+    options?.slowContextVariant ?? defaultSlowContextVariant(name),
+  )
+
+  return responses
 }
 
 export function createDashboardScenarioMockPlan(
@@ -148,8 +168,11 @@ export function createDashboardScenarioClient(
   }
 }
 
-export function createDashboardScenarioState(name: DashboardScenarioName): DashboardScenarioState {
-  const responses = structuredClone(SCENARIO_BASE_RESPONSES[name])
+export function createDashboardScenarioState(
+  name: DashboardScenarioName,
+  options?: DashboardScenarioResponseOptions,
+): DashboardScenarioState {
+  const responses = createDashboardScenarioResponses(name, options)
   const state = createInitialDashboardDataState()
 
   state.global = {
@@ -293,6 +316,8 @@ function freshenDashboardResponses(responses: DashboardResponseSet, baseMs: numb
 
   updateSymbolTimestamps(responses.symbols['BTC-USD'], btcAsOf)
   updateSymbolTimestamps(responses.symbols['ETH-USD'], ethAsOf)
+  updateSlowContextTimestamps(responses.symbols['BTC-USD'], baseMs, btcAsOf)
+  updateSlowContextTimestamps(responses.symbols['ETH-USD'], baseMs, ethAsOf)
 
   return responses
 }
@@ -309,4 +334,122 @@ function updateSymbolTimestamps(symbol: DashboardSymbolStateContract, asOf: stri
   symbol.recentContext.thirtySeconds.buckets[0].window.end = asOf
   symbol.recentContext.twoMinutes.buckets[0].window.end = asOf
   symbol.recentContext.fiveMinutes.buckets[0].window.end = asOf
+}
+
+function updateSlowContextTimestamps(symbol: DashboardSymbolStateContract, baseMs: number, queriedAt: string) {
+  symbol.slowContext.queriedAt = queriedAt
+
+  for (const context of symbol.slowContext.contexts) {
+    if (!context.asOfTs) {
+      continue
+    }
+
+    const asOfMs = context.metricFamily === 'etf_daily_flow'
+      ? baseMs - 36 * 60 * 60 * 1000
+      : baseMs - 18 * 60 * 60 * 1000
+    const publishedOffsetMs = context.metricFamily === 'etf_daily_flow' ? 2 * 60 * 60 * 1000 : 90 * 60 * 1000
+
+    context.asOfTs = new Date(asOfMs).toISOString()
+    context.publishedTs = new Date(asOfMs + publishedOffsetMs).toISOString()
+    context.ingestTs = new Date(asOfMs + publishedOffsetMs + 3 * 60 * 1000).toISOString()
+
+    if (context.thresholdBasis) {
+      context.thresholdBasis = {
+        ...context.thresholdBasis,
+        delayedAfterTs: new Date(asOfMs + 24 * 60 * 60 * 1000).toISOString(),
+        staleAfterTs: new Date(
+          asOfMs + (context.metricFamily === 'etf_daily_flow' ? 72 : 60) * 60 * 60 * 1000,
+        ).toISOString(),
+      }
+    }
+  }
+}
+
+function applySlowContextVariant(
+  responses: DashboardResponseSet,
+  focusedSymbol: DashboardSymbol,
+  variant: DashboardSlowContextScenarioName,
+) {
+  const slowContext = responses.symbols[focusedSymbol].slowContext
+
+  switch (variant) {
+    case 'healthy':
+      return
+    case 'delayed':
+      updateSlowContextContext(slowContext, 'cme_open_interest', {
+        freshness: 'delayed',
+        messageKey: 'cme_open_interest_delayed',
+        message: 'CME open interest is delayed',
+      })
+      return
+    case 'stale':
+      updateSlowContextContext(slowContext, 'cme_volume', {
+        freshness: 'stale',
+        messageKey: 'cme_volume_stale',
+        message: 'CME volume is stale',
+      })
+      return
+    case 'partial':
+      updateSlowContextContext(
+        slowContext,
+        focusedSymbol === 'BTC-USD' ? 'etf_daily_flow' : 'cme_open_interest',
+        unavailableSlowContextOverrides('partial slow-context metric unavailable'),
+      )
+      return
+    case 'unavailable':
+      for (const context of slowContext.contexts) {
+        updateSlowContextContext(
+          slowContext,
+          context.metricFamily,
+          unavailableSlowContextOverrides('slow context reader unavailable'),
+        )
+      }
+  }
+}
+
+function defaultSlowContextVariant(name: DashboardScenarioName): DashboardSlowContextScenarioName {
+  switch (name) {
+    case 'degraded':
+      return 'delayed'
+    case 'stale':
+      return 'stale'
+    case 'partial':
+      return 'partial'
+    default:
+      return 'healthy'
+  }
+}
+
+function updateSlowContextContext(
+  slowContext: DashboardSymbolStateContract['slowContext'],
+  metricFamily: DashboardSymbolStateContract['slowContext']['contexts'][number]['metricFamily'],
+  overrides: Partial<DashboardSymbolStateContract['slowContext']['contexts'][number]>,
+) {
+  slowContext.contexts = slowContext.contexts.map((context) => {
+    if (context.metricFamily !== metricFamily) {
+      return context
+    }
+
+    return {
+      ...context,
+      ...overrides,
+    }
+  })
+}
+
+function unavailableSlowContextOverrides(error: string): Partial<DashboardSymbolStateContract['slowContext']['contexts'][number]> {
+  return {
+    availability: 'unavailable',
+    freshness: 'unavailable',
+    asOfTs: undefined,
+    publishedTs: undefined,
+    ingestTs: undefined,
+    revision: undefined,
+    value: undefined,
+    previousValue: undefined,
+    thresholdBasis: undefined,
+    messageKey: 'slow_context_unavailable',
+    message: 'Slow context is unavailable',
+    error,
+  }
 }

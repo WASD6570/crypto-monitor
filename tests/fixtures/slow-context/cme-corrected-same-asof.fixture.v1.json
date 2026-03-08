@@ -1,0 +1,13 @@
+{
+  "sourceKey": "cme.daily.eth",
+  "metricFamily": "cme_open_interest",
+  "publishState": "published_same_value_or_same_asof",
+  "asset": "ETH",
+  "asOf": "2026-03-09T00:00:00Z",
+  "publishedAt": "2026-03-09T21:05:00Z",
+  "revision": "2",
+  "value": {
+    "amount": "9310.00",
+    "unit": "contracts"
+  }
+}

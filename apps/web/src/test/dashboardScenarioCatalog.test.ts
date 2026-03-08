@@ -10,14 +10,22 @@ describe('dashboard scenario catalog', () => {
   test('returns deterministic mock plans for repeated inputs', () => {
     const baseMs = Date.parse('2026-03-08T12:00:00Z')
 
-    const first = createDashboardScenarioMockPlan('degraded', { baseMs })
-    const second = createDashboardScenarioMockPlan('degraded', { baseMs })
+    const first = createDashboardScenarioMockPlan('degraded', { baseMs, slowContextVariant: 'delayed' })
+    const second = createDashboardScenarioMockPlan('degraded', { baseMs, slowContextVariant: 'delayed' })
 
     expect(first).toEqual(second)
     expect(first).not.toBe(second)
     expect(first.global.responses[0].asOf).toBe('2026-03-08T11:59:50.000Z')
     expect(first.symbols['BTC-USD'].responses[0].asOf).toBe('2026-03-08T11:59:44.000Z')
     expect(first.symbols['ETH-USD'].responses[0].asOf).toBe('2026-03-08T11:59:40.000Z')
+    expect(first.symbols['ETH-USD'].responses[0].slowContext.contexts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          metricFamily: 'cme_open_interest',
+          freshness: 'delayed',
+        }),
+      ]),
+    )
   })
 
   test('preserves stale last-known-good semantics instead of generic unavailable output', () => {
@@ -81,5 +89,30 @@ describe('dashboard scenario catalog', () => {
     )
     await expect(staleClient.getGlobalState()).rejects.toThrow('503 Service Unavailable')
     await expect(unavailableClient.getSymbolState('ETH-USD')).rejects.toThrow('503 Service Unavailable')
+  })
+
+  test('supports targeted slow-context variants without changing realtime trust semantics', () => {
+    const scenario = createDashboardScenarioState('healthy', {
+      baseMs: Date.parse('2026-03-08T12:00:00Z'),
+      slowContextVariant: 'unavailable',
+    })
+
+    const viewModel = deriveDashboardViewModel({
+      state: scenario.state,
+      focusedSymbol: scenario.focusedSymbol,
+      nowMs: scenario.nowMs,
+    }).viewModel
+
+    expect(viewModel.summaries['BTC-USD'].trustState).toBe('ready')
+    expect(viewModel.slowContextPanel.trustState).toBe('unavailable')
+    expect(viewModel.slowContextPanel.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          metricFamily: 'cme_volume',
+          valueLabel: 'Unavailable',
+          note: 'slow context reader unavailable',
+        }),
+      ]),
+    )
   })
 })

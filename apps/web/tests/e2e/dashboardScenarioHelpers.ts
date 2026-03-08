@@ -1,13 +1,21 @@
 import type { Page, Route } from '@playwright/test'
 import {
   createDashboardScenarioMockPlan,
+  type DashboardSlowContextScenarioName,
   type DashboardScenarioMockStep,
   type DashboardScenarioName,
 } from '../../src/test/dashboardScenarioCatalog'
 import { DASHBOARD_SYMBOLS, type DashboardSymbol } from '../../src/features/dashboard-shell/model/dashboardShellModel'
 
-export async function mockDashboardScenario(page: Page, name: DashboardScenarioName) {
-  const plan = createDashboardScenarioMockPlan(name, { baseMs: Date.now() })
+type DashboardScenarioMockOptions = {
+  slowContextVariant?: DashboardSlowContextScenarioName
+}
+
+export async function mockDashboardScenario(page: Page, name: DashboardScenarioName, options?: DashboardScenarioMockOptions) {
+  const plan = createDashboardScenarioMockPlan(name, {
+    baseMs: Date.now(),
+    slowContextVariant: options?.slowContextVariant,
+  })
   let globalCalls = 0
   const symbolCalls = DASHBOARD_SYMBOLS.reduce<Record<DashboardSymbol, number>>((accumulator, symbol) => {
     accumulator[symbol] = 0

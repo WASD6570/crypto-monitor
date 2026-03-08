@@ -3,12 +3,16 @@ import type {
   DashboardBucketSectionContract,
   DashboardGlobalStateContract,
   DashboardGlobalStateSummaryContract,
+  DashboardSlowContextEntryContract,
+  DashboardSlowContextMetricFamily,
   DashboardSymbolStateContract,
 } from '../../api/dashboard/dashboardContracts'
 import {
   DASHBOARD_SECTIONS,
   type DashboardFocusedPanel,
   type DashboardPanelMetric,
+  type DashboardSlowContextPanel,
+  type DashboardSlowContextRow,
   DASHBOARD_SYMBOLS,
   type DashboardSectionKey,
   type DashboardSectionState,
@@ -25,6 +29,12 @@ import {
   type DashboardDataState,
   type DashboardSurfaceRecord,
 } from './dashboardQueryState'
+
+const SLOW_CONTEXT_ROW_ORDER: DashboardSlowContextMetricFamily[] = [
+  'cme_volume',
+  'cme_open_interest',
+  'etf_daily_flow',
+]
 
 const SECTION_TITLES: Record<DashboardSectionKey, string> = {
   overview: 'Overview',
@@ -60,6 +70,7 @@ export function deriveDashboardViewModel({ state, focusedSymbol, nowMs }: Dashbo
   }, {} as Record<DashboardSymbol, DashboardSummary>)
 
   const focusedPanels = buildFocusedPanels(state, focusedSymbol, nowMs)
+  const slowContextPanel = buildSlowContextPanel(focusedSymbol, state.symbols[focusedSymbol])
   const sections = buildSections(focusedPanels)
   const globalTrust = buildGlobalTrust(state.global, focusedSymbol, nowMs)
   const dataTimestamps = collectTimestamps(state)
@@ -98,10 +109,56 @@ export function deriveDashboardViewModel({ state, focusedSymbol, nowMs }: Dashbo
       lastSuccessLabel: lastSuccessAt ? `Last successful refresh ${formatAgeLabel(nowMs - lastSuccessAt)} ago` : undefined,
       summaries,
       focusedPanels,
+      slowContextPanel,
       sections,
     },
     hasRenderableShell,
     initialUnavailableReason,
+  }
+}
+
+function buildSlowContextPanel(
+  focusedSymbol: DashboardSymbol,
+  record: DashboardSurfaceRecord<DashboardSymbolStateContract>,
+): DashboardSlowContextPanel {
+  const asset = assetFromSymbol(focusedSymbol)
+  if (!record.data) {
+    const pending = record.pending
+    const rows = SLOW_CONTEXT_ROW_ORDER.map((metricFamily) =>
+      createSlowContextRow(metricFamily, {
+        status: pending ? 'loading' : 'unavailable',
+        valueLabel: pending ? 'Awaiting first read' : 'Unavailable',
+        freshnessLabel: pending ? 'Pending' : 'Unavailable',
+        cadenceLabel: metricCadenceLabel(undefined, metricFamily),
+        asOfLabel: pending ? 'Waiting for service payload' : 'As of unavailable',
+        note: pending
+          ? 'Slow context is waiting for the focused symbol payload.'
+          : (record.error ?? 'Slow context is unavailable until the service-owned symbol response loads.'),
+      }),
+    )
+
+    return {
+      title: 'Slow USA Context',
+      eyebrow: `${asset} institutional backdrop`,
+      badgeLabel: 'Context only',
+      trustState: pending ? 'loading' : 'unavailable',
+      summary: 'These indicators update on a slower schedule than market-state feeds.',
+      note: 'Use to explain backdrop, not to gate the live state.',
+      rows,
+    }
+  }
+
+  const contexts = new Map(record.data.slowContext.contexts.map((context) => [context.metricFamily, context]))
+  const rows = SLOW_CONTEXT_ROW_ORDER.map((metricFamily) => buildSlowContextRow(metricFamily, contexts.get(metricFamily), asset))
+
+  return {
+    title: 'Slow USA Context',
+    eyebrow: `${record.data.slowContext.asset} institutional backdrop`,
+    badgeLabel: 'Context only',
+    trustState: deriveSlowContextPanelTrust(rows),
+    summary: 'These indicators update on a slower schedule than market-state feeds.',
+    note: 'Use to explain backdrop, not to gate the live state.',
+    rows,
   }
 }
 
@@ -424,6 +481,36 @@ function buildDashboardNotes(
   return notes
 }
 
+function buildSlowContextRow(
+  metricFamily: DashboardSlowContextMetricFamily,
+  context: DashboardSlowContextEntryContract | undefined,
+  asset: string,
+): DashboardSlowContextRow {
+  if (!context) {
+    return createSlowContextRow(metricFamily, {
+      status: 'unavailable',
+      valueLabel: 'Unavailable',
+      freshnessLabel: 'Unavailable',
+      cadenceLabel: metricCadenceLabel(undefined, metricFamily),
+      asOfLabel: 'As of unavailable',
+      note: `No trusted ${slowContextMetricLabel(metricFamily).toLowerCase()} response is available for ${asset}.`,
+    })
+  }
+
+  return createSlowContextRow(metricFamily, {
+    status: slowContextTrustState(context),
+    valueLabel: formatSlowContextValue(context.value, context.availability),
+    freshnessLabel: titleCase(context.freshness),
+    cadenceLabel: metricCadenceLabel(context.expectedCadence, metricFamily),
+    asOfLabel: context.asOfTs ? `As of ${formatReadableTime(context.asOfTs)}` : 'As of unavailable',
+    publishedLabel: context.publishedTs ? `Published ${formatReadableTime(context.publishedTs)}` : undefined,
+    ingestLabel: context.ingestTs ? `Ingested ${formatReadableTime(context.ingestTs)}` : undefined,
+    previousValueLabel: context.previousValue ? `Prev ${formatCandidateValue(context.previousValue)}` : undefined,
+    revisionLabel: context.revision ? `Revision ${context.revision}` : undefined,
+    note: context.error ?? context.message,
+  })
+}
+
 function dashboardStatusNotesFromSummary(symbol: DashboardSymbol, summary: DashboardSummary): string[] {
   if (summary.trustState === 'stale') {
     return [`${symbol} is stale; showing last-known-good current state.`]
@@ -454,6 +541,17 @@ function createSectionState(
     status,
     note,
     reasons,
+  }
+}
+
+function createSlowContextRow(
+  metricFamily: DashboardSlowContextMetricFamily,
+  args: Omit<DashboardSlowContextRow, 'metricFamily' | 'label'>,
+): DashboardSlowContextRow {
+  return {
+    metricFamily,
+    label: slowContextMetricLabel(metricFamily),
+    ...args,
   }
 }
 
@@ -741,6 +839,18 @@ function newestTimestamp(values: Array<number | undefined>): number | undefined 
   return values.filter((value): value is number => typeof value === 'number').sort((left, right) => right - left)[0]
 }
 
+function deriveSlowContextPanelTrust(rows: DashboardSlowContextRow[]): DashboardTrustState {
+  const activeStates = rows
+    .map((row) => row.status)
+    .filter((status) => status !== 'unavailable')
+
+  if (activeStates.length === 0) {
+    return rows.some((row) => row.status === 'loading') ? 'loading' : 'unavailable'
+  }
+
+  return combineTrusts(activeStates)
+}
+
 function parseAgeMs(timestamp: string, nowMs: number): number | undefined {
   const parsed = Date.parse(timestamp)
   if (Number.isNaN(parsed)) {
@@ -763,6 +873,81 @@ function normalizeForRenderableShell(state: DashboardTrustState): DashboardTrust
     return 'degraded'
   }
   return state
+}
+
+function assetFromSymbol(symbol: DashboardSymbol): string {
+  return symbol.split('-')[0]
+}
+
+function slowContextMetricLabel(metricFamily: DashboardSlowContextMetricFamily): string {
+  switch (metricFamily) {
+    case 'cme_volume':
+      return 'CME volume'
+    case 'cme_open_interest':
+      return 'CME open interest'
+    case 'etf_daily_flow':
+      return 'ETF daily flow'
+  }
+}
+
+function slowContextTrustState(context: DashboardSlowContextEntryContract): DashboardTrustState {
+  if (context.availability === 'unavailable') {
+    return 'unavailable'
+  }
+  switch (context.freshness) {
+    case 'stale':
+      return 'stale'
+    case 'delayed':
+      return 'degraded'
+    case 'unavailable':
+      return 'unavailable'
+    default:
+      return 'ready'
+  }
+}
+
+function formatSlowContextValue(
+  value: DashboardSlowContextEntryContract['value'],
+  availability: DashboardSlowContextEntryContract['availability'],
+): string {
+  if (!value || availability === 'unavailable') {
+    return 'Unavailable'
+  }
+
+  return formatCandidateValue(value)
+}
+
+function formatCandidateValue(value: NonNullable<DashboardSlowContextEntryContract['value']>): string {
+  const parsed = Number(value.amount)
+  const amount = Number.isNaN(parsed)
+    ? value.amount
+    : parsed.toLocaleString('en-US', {
+        minimumFractionDigits: value.unit === 'usd' ? 2 : 0,
+        maximumFractionDigits: value.unit === 'usd' ? 2 : 2,
+      })
+
+  if (value.unit === 'usd') {
+    return `$${amount}`
+  }
+
+  return `${amount} ${value.unit.toUpperCase() === 'USD' ? 'USD' : value.unit}`
+}
+
+function metricCadenceLabel(
+  cadence: DashboardSlowContextEntryContract['expectedCadence'] | undefined,
+  metricFamily: DashboardSlowContextMetricFamily,
+): string {
+  if (cadence === 'daily') {
+    return 'Daily publication'
+  }
+  if (cadence === 'session') {
+    return 'Session-based publication'
+  }
+  return metricFamily === 'etf_daily_flow' ? 'Daily publication' : 'Session-based publication'
+}
+
+function titleCase(value: string): string {
+  return value.length === 0 ? value : `${value[0].toUpperCase()}${value.slice(1)}`
 }
 
 function hasTimestampTrustReduction(reasons: string[]): boolean {

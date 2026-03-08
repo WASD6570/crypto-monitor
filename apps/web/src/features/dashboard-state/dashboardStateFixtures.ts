@@ -1,5 +1,10 @@
 import type { DashboardClient } from '../../api/dashboard/dashboardClient'
-import type { DashboardGlobalStateContract, DashboardSymbolStateContract } from '../../api/dashboard/dashboardContracts'
+import type {
+  DashboardGlobalStateContract,
+  DashboardSlowContextContract,
+  DashboardSlowContextEntryContract,
+  DashboardSymbolStateContract,
+} from '../../api/dashboard/dashboardContracts'
 import { type DashboardSymbol } from '../dashboard-shell/model/dashboardShellModel'
 
 export type DashboardResponseSet = {
@@ -52,14 +57,136 @@ function createRecentContext(family: string, end: string, availability: Dashboar
   }
 }
 
+function createSlowContextEntry(
+  asset: string,
+  metricFamily: DashboardSlowContextEntryContract['metricFamily'],
+  overrides?: Partial<DashboardSlowContextEntryContract>,
+): DashboardSlowContextEntryContract {
+  const defaults: Record<DashboardSlowContextEntryContract['metricFamily'], DashboardSlowContextEntryContract> = {
+    cme_volume: {
+      sourceFamily: 'CME',
+      metricFamily: 'cme_volume',
+      asset,
+      availability: 'available',
+      freshness: 'fresh',
+      expectedCadence: 'session',
+      asOfTs: '2026-01-14T00:00:00Z',
+      publishedTs: '2026-01-14T20:45:00Z',
+      ingestTs: '2026-01-14T20:48:00Z',
+      revision: '1',
+      value: {
+        amount: asset === 'BTC' ? '18342.55' : '9284.00',
+        unit: 'contracts',
+      },
+      previousValue: {
+        amount: asset === 'BTC' ? '17880.10' : '9012.25',
+        unit: 'contracts',
+      },
+      thresholdBasis: {
+        expectedCadence: 'session',
+        delayedAfterTs: '2026-01-15T21:00:00Z',
+        staleAfterTs: '2026-01-17T09:00:00Z',
+        ageReference: 'as_of',
+      },
+      messageKey: 'cme_volume_fresh',
+      message: 'CME volume is current',
+    },
+    cme_open_interest: {
+      sourceFamily: 'CME',
+      metricFamily: 'cme_open_interest',
+      asset,
+      availability: 'available',
+      freshness: 'fresh',
+      expectedCadence: 'session',
+      asOfTs: '2026-01-14T00:00:00Z',
+      publishedTs: '2026-01-14T20:45:00Z',
+      ingestTs: '2026-01-14T20:48:00Z',
+      revision: '1',
+      value: {
+        amount: asset === 'BTC' ? '9284.00' : '6120.25',
+        unit: 'contracts',
+      },
+      previousValue: {
+        amount: asset === 'BTC' ? '9151.90' : '6012.80',
+        unit: 'contracts',
+      },
+      thresholdBasis: {
+        expectedCadence: 'session',
+        delayedAfterTs: '2026-01-15T21:00:00Z',
+        staleAfterTs: '2026-01-17T09:00:00Z',
+        ageReference: 'as_of',
+      },
+      messageKey: 'cme_open_interest_fresh',
+      message: 'CME open interest is current',
+    },
+    etf_daily_flow: {
+      sourceFamily: 'ETF',
+      metricFamily: 'etf_daily_flow',
+      asset,
+      availability: asset === 'BTC' ? 'available' : 'unavailable',
+      freshness: asset === 'BTC' ? 'fresh' : 'unavailable',
+      expectedCadence: 'daily',
+      asOfTs: asset === 'BTC' ? '2026-01-14T00:00:00Z' : undefined,
+      publishedTs: asset === 'BTC' ? '2026-01-14T22:15:00Z' : undefined,
+      ingestTs: asset === 'BTC' ? '2026-01-14T22:18:00Z' : undefined,
+      revision: asset === 'BTC' ? '1' : undefined,
+      value: asset === 'BTC'
+        ? {
+            amount: '245000000.00',
+            unit: 'usd',
+          }
+        : undefined,
+      previousValue: asset === 'BTC'
+        ? {
+            amount: '198000000.00',
+            unit: 'usd',
+          }
+        : undefined,
+      thresholdBasis: asset === 'BTC'
+        ? {
+            expectedCadence: 'daily',
+            delayedAfterTs: '2026-01-15T23:00:00Z',
+            staleAfterTs: '2026-01-17T23:00:00Z',
+            ageReference: 'as_of',
+          }
+        : undefined,
+      messageKey: asset === 'BTC' ? 'etf_daily_flow_fresh' : 'etf_daily_flow_unavailable',
+      message: asset === 'BTC' ? 'ETF daily flow is current' : 'ETF daily flow is unavailable',
+      error: asset === 'BTC' ? undefined : 'No trusted ETF daily flow is tracked for this focused asset.',
+    },
+  }
+
+  return {
+    ...defaults[metricFamily],
+    ...overrides,
+    value: overrides?.value === undefined ? defaults[metricFamily].value : overrides.value,
+    previousValue: overrides?.previousValue === undefined ? defaults[metricFamily].previousValue : overrides.previousValue,
+    thresholdBasis: overrides?.thresholdBasis === undefined ? defaults[metricFamily].thresholdBasis : overrides.thresholdBasis,
+  }
+}
+
+function createSlowContext(asset: string, overrides?: Partial<Record<DashboardSlowContextEntryContract['metricFamily'], Partial<DashboardSlowContextEntryContract>>>): DashboardSlowContextContract {
+  return {
+    asset,
+    queriedAt: '2026-01-15T14:32:10Z',
+    contexts: [
+      createSlowContextEntry(asset, 'cme_volume', overrides?.cme_volume),
+      createSlowContextEntry(asset, 'cme_open_interest', overrides?.cme_open_interest),
+      createSlowContextEntry(asset, 'etf_daily_flow', overrides?.etf_daily_flow),
+    ],
+  }
+}
+
 function createSymbolState(symbol: DashboardSymbol, asOf: string, overrides?: Partial<DashboardSymbolStateContract>): DashboardSymbolStateContract {
   const isBtc = symbol === 'BTC-USD'
+  const asset = isBtc ? 'BTC' : 'ETH'
 
   return {
     schemaVersion: 'market_state_current_response_v1',
     symbol,
     asOf,
     version: symbolVersion,
+    slowContext: createSlowContext(asset),
     composite: {
       availability: 'available',
       reasonCodes: [],

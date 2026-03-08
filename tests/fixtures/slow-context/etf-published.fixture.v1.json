@@ -1,0 +1,13 @@
+{
+  "sourceKey": "etf.daily.flow",
+  "metricFamily": "etf_daily_flow",
+  "publishState": "published_new_value",
+  "asset": "BTC",
+  "asOf": "2026-03-09T00:00:00Z",
+  "publishedAt": "2026-03-09T22:15:00Z",
+  "revision": "1",
+  "value": {
+    "amount": "245000000.00",
+    "unit": "usd"
+  }
+}

@@ -15,6 +15,15 @@ describe('dashboard state mapper', () => {
         expect(viewModel.summaries['BTC-USD'].trustState).toBe('ready')
         expect(viewModel.summaries['ETH-USD'].warning).toBeUndefined()
         expect(viewModel.focusedPanels.overview.summary).toContain('BTC-USD is TRADEABLE')
+        expect(viewModel.slowContextPanel.badgeLabel).toBe('Context only')
+        expect(viewModel.slowContextPanel.rows).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              label: 'CME volume',
+              freshnessLabel: 'Fresh',
+            }),
+          ]),
+        )
         expect(viewModel.primaryWarning).toEqual(
           expect.objectContaining({ label: 'Derivatives Context unavailable' }),
         )
@@ -53,6 +62,14 @@ describe('dashboard state mapper', () => {
         expect(viewModel.summaries['ETH-USD'].warning).toEqual(
           expect.objectContaining({ label: 'ETH-USD partial inputs' }),
         )
+        expect(viewModel.slowContextPanel.rows).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              metricFamily: 'etf_daily_flow',
+              valueLabel: 'Unavailable',
+            }),
+          ]),
+        )
         expect(viewModel.focusedPanels.microstructure.warning).toEqual(
           expect.objectContaining({ detail: 'Missing Input' }),
         )
@@ -67,6 +84,7 @@ describe('dashboard state mapper', () => {
           expect.objectContaining({ label: 'ETH-USD current state unavailable' }),
         )
         expect(viewModel.focusedPanels.overview.trustState).toBe('unavailable')
+        expect(viewModel.slowContextPanel.trustState).toBe('unavailable')
         expect(viewModel.focusedPanels.health.trustState).toBe('ready')
       },
     },
@@ -238,6 +256,23 @@ describe('dashboard state mapper', () => {
       label: 'Focused symbol',
       value: 'ETH-USD',
     })
+    expect(btcDerived.viewModel.slowContextPanel.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: 'ETF daily flow',
+          valueLabel: '$245,000,000.00',
+        }),
+      ]),
+    )
+    expect(ethDerived.viewModel.slowContextPanel.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: 'ETF daily flow',
+          valueLabel: 'Unavailable',
+          note: 'No trusted ETF daily flow is tracked for this focused asset.',
+        }),
+      ]),
+    )
     expect(btcDerived.viewModel.primaryWarning).toEqual(
       expect.objectContaining({
         tone: 'degraded',

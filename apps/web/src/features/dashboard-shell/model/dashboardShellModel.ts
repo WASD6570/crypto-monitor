@@ -46,6 +46,31 @@ export type DashboardFocusedPanel = {
   warning?: DashboardWarning
 }
 
+export type DashboardSlowContextRow = {
+  metricFamily: string
+  label: string
+  status: DashboardTrustState
+  valueLabel: string
+  freshnessLabel: string
+  cadenceLabel: string
+  asOfLabel: string
+  publishedLabel?: string
+  ingestLabel?: string
+  previousValueLabel?: string
+  revisionLabel?: string
+  note: string
+}
+
+export type DashboardSlowContextPanel = {
+  title: string
+  eyebrow: string
+  badgeLabel: string
+  trustState: DashboardTrustState
+  summary: string
+  note: string
+  rows: DashboardSlowContextRow[]
+}
+
 export type DashboardViewModel = {
   asOf: string
   oldestAgeLabel: string
@@ -58,6 +83,7 @@ export type DashboardViewModel = {
   lastSuccessLabel?: string
   summaries: Record<DashboardSymbol, DashboardSummary>
   focusedPanels: Record<DashboardSectionKey, DashboardFocusedPanel>
+  slowContextPanel: DashboardSlowContextPanel
   sections: Record<DashboardSectionKey, DashboardSectionState>
 }
 

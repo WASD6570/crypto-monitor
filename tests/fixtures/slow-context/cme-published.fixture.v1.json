@@ -1,0 +1,13 @@
+{
+  "sourceKey": "cme.daily.btc",
+  "metricFamily": "cme_volume",
+  "publishState": "published_new_value",
+  "asset": "BTC",
+  "asOf": "2026-03-09T00:00:00Z",
+  "publishedAt": "2026-03-09T20:30:00Z",
+  "revision": "1",
+  "value": {
+    "amount": "18342.55",
+    "unit": "contracts"
+  }
+}

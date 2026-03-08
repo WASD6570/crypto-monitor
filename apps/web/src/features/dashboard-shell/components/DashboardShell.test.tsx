@@ -36,6 +36,10 @@ describe('Dashboard shell', () => {
     expect(screen.getByTestId('section-slot-microstructure')).toBeInTheDocument()
     expect(screen.getByTestId('section-slot-derivatives')).toBeInTheDocument()
     expect(screen.getByTestId('section-slot-health')).toBeInTheDocument()
+    expect(screen.getByTestId('slow-context-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('slow-context-badge')).toHaveTextContent('Context only')
+    expect(screen.getByTestId('slow-context-row-cme_volume')).toHaveTextContent('CME volume')
+    expect(screen.getByTestId('slow-context-row-etf_daily_flow')).toHaveTextContent('$245,000,000.00')
     expect(screen.getByText('Effective state')).toBeInTheDocument()
     expect(screen.getByText('Trusted bucket')).toBeInTheDocument()
   })
@@ -102,7 +106,18 @@ describe('Dashboard shell', () => {
     expect(screen.getByTestId('summary-strip')).toBeInTheDocument()
     expect(screen.getByTestId('section-slot-health')).toHaveTextContent('unavailable')
     expect(screen.getByTestId('route-warning')).toHaveTextContent('Feed Health And Regime unavailable')
+    expect(screen.getByTestId('slow-context-row-etf_daily_flow')).toHaveTextContent('Unavailable')
     expect(screen.getByTestId('section-slot-overview')).toHaveTextContent('Focused symbol regime')
+  })
+
+  test('keeps delayed slow-context messaging isolated to the advisory panel', () => {
+    renderAt('/dashboard?symbol=ETH-USD&section=overview', { fixture: degradedDashboardFixture })
+
+    expect(screen.getByTestId('route-warning')).toHaveTextContent('ETH-USD trust reduced')
+    expect(screen.getByTestId('slow-context-badge')).toHaveTextContent('Context only')
+    expect(screen.getByTestId('slow-context-row-cme_open_interest')).toHaveTextContent('Delayed')
+    expect(screen.getByTestId('slow-context-row-cme_open_interest')).toHaveTextContent('CME open interest is delayed')
+    expect(screen.getByTestId('section-slot-overview')).toHaveTextContent('ETH-USD is WATCH')
   })
 
   test('keeps active section semantics and focused warning copy visible through keyboard navigation', async () => {

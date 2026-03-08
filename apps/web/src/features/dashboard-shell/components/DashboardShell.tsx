@@ -216,6 +216,73 @@ export function DashboardShell({ fixture, onRetry, routeState }: DashboardShellP
             ))}
           </div>
         </section>
+
+        <section
+          aria-label="Slow USA context"
+          className="slow-context-panel"
+          data-testid="slow-context-panel"
+        >
+          <div className="slow-context-panel__header">
+            <div>
+              <p className="eyebrow">{fixture.slowContextPanel.eyebrow}</p>
+              <h2>{fixture.slowContextPanel.title}</h2>
+            </div>
+            <div className="slow-context-panel__badges">
+              <span className="focus-pill" data-testid="slow-context-badge">{fixture.slowContextPanel.badgeLabel}</span>
+              <span className={trustToneClass(fixture.slowContextPanel.trustState)}>
+                {fixture.slowContextPanel.trustState}
+              </span>
+            </div>
+          </div>
+          <p className="slow-context-panel__summary">{fixture.slowContextPanel.summary}</p>
+          <p className="inline-note">{fixture.slowContextPanel.note}</p>
+          <div className="slow-context-grid">
+            {fixture.slowContextPanel.rows.map((row) => (
+              <article
+                className={`slow-context-row slow-context-row--${row.status}`}
+                data-testid={`slow-context-row-${row.metricFamily}`}
+                key={row.metricFamily}
+              >
+                <div className="slow-context-row__header">
+                  <div>
+                    <p className="slow-context-row__label">{row.label}</p>
+                    <p className="inline-note">{row.cadenceLabel}</p>
+                  </div>
+                  <span className={trustToneClass(row.status)}>{row.freshnessLabel}</span>
+                </div>
+                <p className="slow-context-row__value">{row.valueLabel}</p>
+                <p className="slow-context-row__as-of">{row.asOfLabel}</p>
+                <dl className="slow-context-row__meta">
+                  {row.publishedLabel ? (
+                    <div>
+                      <dt>Published</dt>
+                      <dd>{row.publishedLabel.replace(/^Published /, '')}</dd>
+                    </div>
+                  ) : null}
+                  {row.ingestLabel ? (
+                    <div>
+                      <dt>Ingested</dt>
+                      <dd>{row.ingestLabel.replace(/^Ingested /, '')}</dd>
+                    </div>
+                  ) : null}
+                  {row.previousValueLabel ? (
+                    <div>
+                      <dt>Previous</dt>
+                      <dd>{row.previousValueLabel.replace(/^Prev /, '')}</dd>
+                    </div>
+                  ) : null}
+                  {row.revisionLabel ? (
+                    <div>
+                      <dt>Revision</dt>
+                      <dd>{row.revisionLabel.replace(/^Revision /, '')}</dd>
+                    </div>
+                  ) : null}
+                </dl>
+                <p className="inline-note">{row.note}</p>
+              </article>
+            ))}
+          </div>
+        </section>
       </div>
     </main>
   )

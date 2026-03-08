@@ -2,12 +2,14 @@ package featureengine
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/crypto-market-copilot/alerts/libs/go/features"
 	"github.com/crypto-market-copilot/alerts/libs/go/ingestion"
+	slowcontext "github.com/crypto-market-copilot/alerts/services/slow-context"
 )
 
 func TestMarketStateCurrentSchema(t *testing.T) {
@@ -107,9 +109,81 @@ func TestCurrentStateUnavailableSections(t *testing.T) {
 	}
 }
 
+func TestCurrentStateSucceedsWhenSlowContextFails(t *testing.T) {
+	service := newBucketServiceWithSlowContext(t, failingSlowContextReader{err: errors.New("slow-context store offline")})
+	baseline := currentStateResponseFixture(t)
+
+	response, err := service.QueryCurrentStateWithSlowContext(currentStateQueryFixture(), slowcontext.AssetQuery{
+		Asset: "BTC",
+		Now:   mustTimeRFC3339(t, "2026-03-10T21:05:00Z"),
+	})
+	if err != nil {
+		t.Fatalf("query current state with slow context: %v", err)
+	}
+	if response.CurrentState.Symbol != baseline.Symbol || response.CurrentState.AsOf != baseline.AsOf {
+		t.Fatalf("current state identity changed: %+v vs %+v", response.CurrentState, baseline)
+	}
+	if response.CurrentState.Regime.EffectiveState != baseline.Regime.EffectiveState {
+		t.Fatalf("effective state changed: %q vs %q", response.CurrentState.Regime.EffectiveState, baseline.Regime.EffectiveState)
+	}
+	context, ok := response.SlowContext.Context(slowcontext.MetricFamilyCMEVolume)
+	if !ok {
+		t.Fatal("expected slow context for cme volume")
+	}
+	if context.Availability != slowcontext.AvailabilityUnavailable {
+		t.Fatalf("availability = %q, want %q", context.Availability, slowcontext.AvailabilityUnavailable)
+	}
+	if context.Error != "slow-context store offline" {
+		t.Fatalf("error = %q, want %q", context.Error, "slow-context store offline")
+	}
+	if response.CurrentState.Buckets.FiveMinutes.Availability != baseline.Buckets.FiveMinutes.Availability {
+		t.Fatalf("bucket availability changed: %q vs %q", response.CurrentState.Buckets.FiveMinutes.Availability, baseline.Buckets.FiveMinutes.Availability)
+	}
+}
+
+func TestSlowContextResponseExplicitlyUnavailable(t *testing.T) {
+	slowService, err := slowcontext.NewService()
+	if err != nil {
+		t.Fatalf("new slow context service: %v", err)
+	}
+	service := newBucketServiceWithSlowContext(t, slowService)
+
+	response, err := service.QueryCurrentStateWithSlowContext(currentStateQueryFixture(), slowcontext.AssetQuery{
+		Asset: "ETH",
+		Now:   mustTimeRFC3339(t, "2026-03-10T12:00:00Z"),
+	})
+	if err != nil {
+		t.Fatalf("query current state with slow context: %v", err)
+	}
+	context, ok := response.SlowContext.Context(slowcontext.MetricFamilyCMEOpenInterest)
+	if !ok {
+		t.Fatal("expected cme open interest context")
+	}
+	if context.Availability != slowcontext.AvailabilityUnavailable {
+		t.Fatalf("availability = %q, want %q", context.Availability, slowcontext.AvailabilityUnavailable)
+	}
+	if context.Freshness != slowcontext.FreshnessUnavailable {
+		t.Fatalf("freshness = %q, want %q", context.Freshness, slowcontext.FreshnessUnavailable)
+	}
+	if context.MessageKey != "cme_open_interest_unavailable" {
+		t.Fatalf("message key = %q", context.MessageKey)
+	}
+	if response.CurrentState.Symbol != "BTC-USD" {
+		t.Fatalf("current state symbol = %q", response.CurrentState.Symbol)
+	}
+}
+
 func currentStateResponseFixture(t *testing.T) features.MarketStateCurrentResponse {
 	t.Helper()
 	service := newBucketService(t)
+	response, err := service.QueryCurrentState(currentStateQueryFixture())
+	if err != nil {
+		t.Fatalf("query current state: %v", err)
+	}
+	return response
+}
+
+func currentStateQueryFixture() features.SymbolCurrentStateQuery {
 	world := testBucketSnapshot(features.CompositeGroupWorld, 64000, 1, 0.99, 0.6, 0, false, "binance")
 	world.SchemaVersion = "v1"
 	world.BucketTs = "2026-03-06T12:05:00Z"
@@ -127,7 +201,7 @@ func currentStateResponseFixture(t *testing.T) features.MarketStateCurrentRespon
 		currentBucketFixture(features.BucketFamily2m, "2026-03-06T12:03:00Z", "2026-03-06T12:05:00Z", 4, 0, 0.78),
 		currentBucketFixture(features.BucketFamily5m, "2026-03-06T12:00:00Z", "2026-03-06T12:05:00Z", 10, 0, 0.78),
 	}
-	response, err := service.QueryCurrentState(features.SymbolCurrentStateQuery{
+	return features.SymbolCurrentStateQuery{
 		Symbol:        "BTC-USD",
 		World:         world,
 		USA:           usa,
@@ -135,11 +209,7 @@ func currentStateResponseFixture(t *testing.T) features.MarketStateCurrentRespon
 		RecentContext: buckets,
 		SymbolRegime:  features.SymbolRegimeSnapshot{SchemaVersion: "v1", Symbol: "BTC-USD", State: features.RegimeStateTradeable, EffectiveBucketEnd: "2026-03-06T12:05:00Z", Reasons: []features.RegimeReasonCode{features.RegimeReasonHealthy}, PrimaryReason: features.RegimeReasonHealthy, ConfigVersion: "regime-engine.market-state.v1", AlgorithmVersion: "symbol-global-regime.v1"},
 		GlobalRegime:  features.GlobalRegimeSnapshot{SchemaVersion: "v1", State: features.RegimeStateWatch, EffectiveBucketEnd: "2026-03-06T12:05:00Z", Reasons: []features.RegimeReasonCode{features.RegimeReasonGlobalSharedWatch}, PrimaryReason: features.RegimeReasonGlobalSharedWatch, ConfigVersion: "regime-engine.market-state.v1", AlgorithmVersion: "symbol-global-regime.v1"},
-	})
-	if err != nil {
-		t.Fatalf("query current state: %v", err)
 	}
-	return response
 }
 
 func currentBucketFixture(family features.BucketFamily, start string, end string, closed int, missing int, cap float64) features.MarketQualityBucket {
@@ -158,3 +228,27 @@ func currentBucketFixture(family features.BucketFamily, start string, end string
 
 var _ = ingestion.VenueBinance
 var _ = time.RFC3339
+
+type failingSlowContextReader struct {
+	err error
+}
+
+func (f failingSlowContextReader) QueryAsset(query slowcontext.AssetQuery) (slowcontext.AssetContextResponse, error) {
+	return slowcontext.AssetContextResponse{}, f.err
+}
+
+func newBucketServiceWithSlowContext(t *testing.T, reader SlowContextReader) *Service {
+	t.Helper()
+	service := newBucketService(t)
+	service.slowContext = reader
+	return service
+}
+
+func mustTimeRFC3339(t *testing.T, value string) time.Time {
+	t.Helper()
+	parsed, err := time.Parse(time.RFC3339, value)
+	if err != nil {
+		t.Fatalf("parse time %q: %v", value, err)
+	}
+	return parsed.UTC()
+}

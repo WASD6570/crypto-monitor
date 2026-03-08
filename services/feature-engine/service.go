@@ -2,18 +2,30 @@ package featureengine
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/crypto-market-copilot/alerts/libs/go/features"
+	slowcontext "github.com/crypto-market-copilot/alerts/services/slow-context"
 )
 
 type Service struct {
 	config          features.CompositeConfig
 	bucketConfig    *features.BucketConfig
 	bucketProcessor *features.WorldUSABucketProcessor
+	slowContext     SlowContextReader
 }
 
 type ServiceOption func(*Service) error
+
+type SlowContextReader interface {
+	QueryAsset(query slowcontext.AssetQuery) (slowcontext.AssetContextResponse, error)
+}
+
+type CurrentStateWithSlowContextResponse struct {
+	CurrentState features.MarketStateCurrentResponse
+	SlowContext  slowcontext.AssetContextResponse
+}
 
 func WithBucketConfig(config features.BucketConfig) ServiceOption {
 	return func(service *Service) error {
@@ -23,6 +35,13 @@ func WithBucketConfig(config features.BucketConfig) ServiceOption {
 		}
 		service.bucketConfig = &config
 		service.bucketProcessor = processor
+		return nil
+	}
+}
+
+func WithSlowContextReader(reader SlowContextReader) ServiceOption {
+	return func(service *Service) error {
+		service.slowContext = reader
 		return nil
 	}
 }
@@ -84,4 +103,41 @@ func (s *Service) QueryCurrentState(query features.SymbolCurrentStateQuery) (fea
 		return features.MarketStateCurrentResponse{}, fmt.Errorf("feature engine service is required")
 	}
 	return features.BuildMarketStateCurrentResponse(query)
+}
+
+func (s *Service) QueryCurrentStateWithSlowContext(query features.SymbolCurrentStateQuery, slowQuery slowcontext.AssetQuery) (CurrentStateWithSlowContextResponse, error) {
+	currentState, err := s.QueryCurrentState(query)
+	if err != nil {
+		return CurrentStateWithSlowContextResponse{}, err
+	}
+	asset := slowQuery.Asset
+	if asset == "" {
+		asset = assetFromSymbol(query.Symbol)
+	}
+	if asset == "" {
+		return CurrentStateWithSlowContextResponse{CurrentState: currentState, SlowContext: slowcontext.NewUnavailableAssetContextResponse("", slowQuery.MetricFamilies, slowQuery.Now, "missing slow-context asset")}, nil
+	}
+	if slowQuery.Now.IsZero() {
+		slowQuery.Now = time.Now().UTC()
+	}
+	slowQuery.Asset = asset
+	if s.slowContext == nil {
+		return CurrentStateWithSlowContextResponse{CurrentState: currentState, SlowContext: slowcontext.NewUnavailableAssetContextResponse(asset, slowQuery.MetricFamilies, slowQuery.Now, "slow context reader unavailable")}, nil
+	}
+	slowResponse, err := s.slowContext.QueryAsset(slowQuery)
+	if err != nil {
+		return CurrentStateWithSlowContextResponse{CurrentState: currentState, SlowContext: slowcontext.NewUnavailableAssetContextResponse(asset, slowQuery.MetricFamilies, slowQuery.Now, err.Error())}, nil
+	}
+	return CurrentStateWithSlowContextResponse{CurrentState: currentState, SlowContext: slowResponse}, nil
+}
+
+func assetFromSymbol(symbol string) string {
+	if symbol == "" {
+		return ""
+	}
+	parts := strings.Split(symbol, "-")
+	if len(parts) == 0 {
+		return ""
+	}
+	return strings.ToUpper(parts[0])
 }

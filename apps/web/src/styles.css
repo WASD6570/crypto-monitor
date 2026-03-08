@@ -87,6 +87,7 @@ a {
 .status-rail,
 .summary-card,
 .detail-shell,
+.slow-context-panel,
 .section-slot,
 .empty-state-panel {
   backdrop-filter: blur(18px);
@@ -97,6 +98,7 @@ a {
 
 .dashboard-hero,
 .detail-shell,
+.slow-context-panel,
 .empty-state-panel {
   border-radius: 28px;
   padding: 28px;
@@ -111,6 +113,7 @@ a {
 
 .hero-title,
 .detail-shell__header h2,
+.slow-context-panel__header h2,
 .empty-state-panel h1,
 .section-slot h3 {
   font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
@@ -126,6 +129,7 @@ a {
 
 .hero-copy,
 .detail-shell__trust-copy,
+.slow-context-panel__summary,
 .empty-state-panel p,
 .section-slot p,
 .status-notes,
@@ -305,7 +309,9 @@ a {
 
 .summary-card__header,
 .section-slot__header,
-.detail-shell__header {
+.detail-shell__header,
+.slow-context-panel__header,
+.slow-context-row__header {
   display: flex;
   align-items: flex-start;
   gap: 16px;
@@ -405,6 +411,96 @@ a {
   gap: 20px;
 }
 
+.slow-context-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.slow-context-panel__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.slow-context-panel__summary,
+.slow-context-row__value,
+.slow-context-row__as-of,
+.slow-context-row__label {
+  margin: 0;
+}
+
+.slow-context-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.slow-context-row {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
+    rgba(13, 14, 18, 0.68);
+}
+
+.slow-context-row--degraded {
+  border-color: rgba(242, 179, 93, 0.24);
+}
+
+.slow-context-row--stale {
+  border-color: rgba(255, 141, 115, 0.26);
+}
+
+.slow-context-row--unavailable {
+  border-color: rgba(157, 150, 167, 0.26);
+  background: rgba(26, 27, 34, 0.88);
+}
+
+.slow-context-row__label {
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.slow-context-row__value {
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  font-size: clamp(1.1rem, 1.8vw, 1.45rem);
+  letter-spacing: 0.01em;
+}
+
+.slow-context-row__as-of {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.slow-context-row__meta {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.slow-context-row__meta div {
+  display: grid;
+  gap: 4px;
+}
+
+.slow-context-row__meta dt {
+  color: var(--muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.slow-context-row__meta dd {
+  margin: 0;
+}
+
 .section-nav {
   display: grid;
   gap: 10px;
@@ -490,6 +586,7 @@ a {
 
   .dashboard-hero,
   .detail-shell,
+  .slow-context-panel,
   .empty-state-panel,
   .status-rail,
   .summary-card,
@@ -500,6 +597,7 @@ a {
 
   .summary-strip,
   .detail-grid,
+  .slow-context-grid,
   .status-metrics,
   .panel-metrics {
     grid-template-columns: 1fr;
@@ -511,7 +609,9 @@ a {
 
   .summary-card__header,
   .section-slot__header,
-  .detail-shell__header {
+  .detail-shell__header,
+  .slow-context-panel__header,
+  .slow-context-row__header {
     flex-direction: column;
   }
 
@@ -525,6 +625,14 @@ a {
 
   .summary-card__badges {
     justify-content: flex-start;
+  }
+
+  .slow-context-panel__badges {
+    justify-content: flex-start;
+  }
+
+  .slow-context-row__meta {
+    grid-template-columns: 1fr;
   }
 
   .section-nav__button {

@@ -9,10 +9,71 @@ export const DASHBOARD_AVAILABILITIES = [
 
 export type DashboardAvailability = (typeof DASHBOARD_AVAILABILITIES)[number]
 
+export const DASHBOARD_SLOW_CONTEXT_AVAILABILITIES = [
+  'available',
+  'unavailable',
+] as const
+
+export type DashboardSlowContextAvailability = (typeof DASHBOARD_SLOW_CONTEXT_AVAILABILITIES)[number]
+
+export const DASHBOARD_SLOW_CONTEXT_FRESHNESS = [
+  'fresh',
+  'delayed',
+  'stale',
+  'unavailable',
+] as const
+
+export type DashboardSlowContextFreshness = (typeof DASHBOARD_SLOW_CONTEXT_FRESHNESS)[number]
+
+export const DASHBOARD_SLOW_CONTEXT_METRIC_FAMILIES = [
+  'cme_volume',
+  'cme_open_interest',
+  'etf_daily_flow',
+] as const
+
+export type DashboardSlowContextMetricFamily = (typeof DASHBOARD_SLOW_CONTEXT_METRIC_FAMILIES)[number]
+
 export type DashboardVersionContract = {
   schemaFamilyVersion: string
   configVersion: string
   algorithmVersion: string
+}
+
+export type DashboardSlowContextValueContract = {
+  amount: string
+  unit: string
+}
+
+export type DashboardSlowContextThresholdBasisContract = {
+  expectedCadence: string
+  delayedAfterTs?: string
+  staleAfterTs?: string
+  ageReference?: string
+}
+
+export type DashboardSlowContextEntryContract = {
+  sourceFamily?: string
+  metricFamily: DashboardSlowContextMetricFamily
+  asset: string
+  availability: DashboardSlowContextAvailability
+  freshness: DashboardSlowContextFreshness
+  expectedCadence?: string
+  asOfTs?: string
+  publishedTs?: string
+  ingestTs?: string
+  revision?: string
+  value?: DashboardSlowContextValueContract
+  previousValue?: DashboardSlowContextValueContract
+  thresholdBasis?: DashboardSlowContextThresholdBasisContract
+  messageKey: string
+  message: string
+  error?: string
+}
+
+export type DashboardSlowContextContract = {
+  asset: string
+  queriedAt?: string
+  contexts: DashboardSlowContextEntryContract[]
 }
 
 export type DashboardCompositeSideContract = {
@@ -53,6 +114,7 @@ export type DashboardSymbolStateContract = {
   symbol: DashboardSymbol
   asOf: string
   version: DashboardVersionContract
+  slowContext: DashboardSlowContextContract
   composite: {
     availability: DashboardAvailability
     reasonCodes: string[]

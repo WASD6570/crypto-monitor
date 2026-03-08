@@ -71,6 +71,36 @@ test('keeps unavailable focused-symbol fallback explicit without blanking health
   await expect(page.getByTestId('section-slot-health')).toContainText('Global ceiling')
 })
 
+test('renders slow context with Context only framing on desktop', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium', 'desktop slow-context smoke only')
+
+  await mockDashboardScenario(page, 'healthy')
+
+  await page.goto('/dashboard')
+
+  await expect(page.getByTestId('slow-context-panel')).toBeVisible()
+  await expect(page.getByTestId('slow-context-badge')).toContainText('Context only')
+  await expect(page.getByTestId('slow-context-row-cme_volume')).toContainText('CME volume')
+  await expect(page.getByTestId('slow-context-row-cme_volume')).toContainText('Fresh')
+  await expect(page.getByTestId('slow-context-row-etf_daily_flow')).toContainText('$245,000,000.00')
+  await expect(page.getByTestId('section-slot-overview')).toContainText('BTC-USD is TRADEABLE')
+})
+
+test('keeps slow context fallback isolated when one advisory row is unavailable', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium', 'desktop slow-context fallback smoke only')
+
+  await mockDashboardScenario(page, 'healthy', { slowContextVariant: 'partial' })
+
+  await page.goto('/dashboard')
+
+  await expect(page.getByTestId('slow-context-panel')).toBeVisible()
+  await expect(page.getByTestId('slow-context-row-cme_open_interest')).toContainText('Fresh')
+  await expect(page.getByTestId('slow-context-row-etf_daily_flow')).toContainText('Unavailable')
+  await expect(page.getByTestId('slow-context-row-etf_daily_flow')).toContainText('partial slow-context metric unavailable')
+  await expect(page.getByTestId('summary-card-BTC-USD')).toContainText('TRADEABLE')
+  await expect(page.getByTestId('route-warning')).toContainText('Derivatives Context unavailable')
+})
+
 test('keeps keyboard symbol and section navigation route-backed on desktop', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium', 'desktop keyboard smoke only')
 
@@ -146,4 +176,19 @@ test('keeps warning hierarchy and route context readable on mobile', async ({ pa
   await expect(page).toHaveURL(/section=health/)
   await expect(page.getByTestId('focused-symbol-heading')).toContainText('ETH-USD')
   await expect(page.getByRole('button', { name: 'Feed Health And Regime' })).toHaveAttribute('aria-current', 'true')
+})
+
+test('keeps slow context readable on mobile', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile-chrome', 'mobile slow-context smoke only')
+
+  await mockDashboardScenario(page, 'healthy', { slowContextVariant: 'stale' })
+
+  await page.goto('/dashboard')
+
+  await expect(page.getByTestId('slow-context-panel')).toBeVisible()
+  await expect(page.getByTestId('slow-context-badge')).toContainText('Context only')
+  await expect(page.getByTestId('slow-context-row-cme_volume')).toContainText('Stale')
+  await expect(page.getByTestId('slow-context-row-cme_volume')).toContainText('As of')
+  await expect(page.getByTestId('summary-card-BTC-USD')).toBeVisible()
+  await expect(page.getByTestId('route-warning')).toBeVisible()
 })

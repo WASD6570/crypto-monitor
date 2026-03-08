@@ -1,5 +1,8 @@
 import {
   DASHBOARD_AVAILABILITIES,
+  DASHBOARD_SLOW_CONTEXT_AVAILABILITIES,
+  DASHBOARD_SLOW_CONTEXT_FRESHNESS,
+  DASHBOARD_SLOW_CONTEXT_METRIC_FAMILIES,
   type DashboardAvailability,
   type DashboardBucketContract,
   type DashboardBucketSectionContract,
@@ -7,6 +10,13 @@ import {
   type DashboardCompositeSideContract,
   type DashboardGlobalStateContract,
   type DashboardGlobalStateSummaryContract,
+  type DashboardSlowContextAvailability,
+  type DashboardSlowContextContract,
+  type DashboardSlowContextEntryContract,
+  type DashboardSlowContextFreshness,
+  type DashboardSlowContextMetricFamily,
+  type DashboardSlowContextThresholdBasisContract,
+  type DashboardSlowContextValueContract,
   type DashboardRecentContextFamilyContract,
   type DashboardSymbolStateContract,
   type DashboardVersionContract,
@@ -14,6 +24,9 @@ import {
 import { DASHBOARD_SYMBOLS, type DashboardSymbol } from '../../features/dashboard-shell/model/dashboardShellModel'
 
 const validAvailabilitySet = new Set<DashboardAvailability>(DASHBOARD_AVAILABILITIES)
+const validSlowContextAvailabilitySet = new Set<DashboardSlowContextAvailability>(DASHBOARD_SLOW_CONTEXT_AVAILABILITIES)
+const validSlowContextFreshnessSet = new Set<DashboardSlowContextFreshness>(DASHBOARD_SLOW_CONTEXT_FRESHNESS)
+const validSlowContextMetricFamilySet = new Set<DashboardSlowContextMetricFamily>(DASHBOARD_SLOW_CONTEXT_METRIC_FAMILIES)
 const validSymbolSet = new Set<DashboardSymbol>(DASHBOARD_SYMBOLS)
 
 export class DashboardDecodeError extends Error {
@@ -31,6 +44,7 @@ export function decodeDashboardSymbolState(value: unknown): DashboardSymbolState
     symbol: readSymbol(root.symbol, 'symbol'),
     asOf: readString(root.asOf, 'asOf'),
     version: readVersion(root.version, 'version'),
+    slowContext: readSlowContext(root.slowContext, readSymbol(root.symbol, 'symbol')),
     composite: {
       availability: readAvailability(readObject(root.composite, 'composite').availability, 'composite.availability'),
       reasonCodes: readStringArray(readObject(root.composite, 'composite').reasonCodes, 'composite.reasonCodes'),
@@ -92,6 +106,48 @@ function readBuckets(value: unknown): DashboardSymbolStateContract['buckets'] {
   }
 }
 
+function readSlowContext(value: unknown, symbol: DashboardSymbol): DashboardSlowContextContract {
+  if (value === undefined || value === null) {
+    return createMissingSlowContext(symbol)
+  }
+
+  const slowContext = readObject(value, 'slowContext')
+  const asset = readString(slowContext.asset, 'slowContext.asset')
+  const contextsValue = slowContext.contexts
+  const contexts = Array.isArray(contextsValue)
+    ? contextsValue.map((entry, index) => readSlowContextEntry(entry, asset, `slowContext.contexts[${index}]`))
+    : fail('slowContext.contexts must be an array')
+
+  return {
+    asset,
+    queriedAt: readOptionalString(slowContext.queriedAt, 'slowContext.queriedAt'),
+    contexts,
+  }
+}
+
+function readSlowContextEntry(value: unknown, asset: string, name: string): DashboardSlowContextEntryContract {
+  const entry = readObject(value, name)
+
+  return {
+    sourceFamily: readOptionalString(entry.sourceFamily, `${name}.sourceFamily`),
+    metricFamily: readSlowContextMetricFamily(entry.metricFamily, `${name}.metricFamily`),
+    asset: readOptionalString(entry.asset, `${name}.asset`) ?? asset,
+    availability: readSlowContextAvailability(entry.availability, `${name}.availability`),
+    freshness: readSlowContextFreshness(entry.freshness, `${name}.freshness`),
+    expectedCadence: readOptionalString(entry.expectedCadence, `${name}.expectedCadence`),
+    asOfTs: readOptionalString(entry.asOfTs, `${name}.asOfTs`),
+    publishedTs: readOptionalString(entry.publishedTs, `${name}.publishedTs`),
+    ingestTs: readOptionalString(entry.ingestTs, `${name}.ingestTs`),
+    revision: readOptionalString(entry.revision, `${name}.revision`),
+    value: readOptionalSlowContextValue(entry.value, `${name}.value`),
+    previousValue: readOptionalSlowContextValue(entry.previousValue, `${name}.previousValue`),
+    thresholdBasis: readOptionalThresholdBasis(entry.thresholdBasis, `${name}.thresholdBasis`),
+    messageKey: readString(entry.messageKey, `${name}.messageKey`),
+    message: readString(entry.message, `${name}.message`),
+    error: readOptionalString(entry.error, `${name}.error`),
+  }
+}
+
 function readRecentContext(value: unknown): DashboardSymbolStateContract['recentContext'] {
   const recentContext = readObject(value, 'recentContext')
 
@@ -132,6 +188,34 @@ function readVersion(value: unknown, name: string): DashboardVersionContract {
     schemaFamilyVersion: readString(version.schemaFamilyVersion, `${name}.schemaFamilyVersion`),
     configVersion: readString(version.configVersion, `${name}.configVersion`),
     algorithmVersion: readString(version.algorithmVersion, `${name}.algorithmVersion`),
+  }
+}
+
+function readOptionalSlowContextValue(value: unknown, name: string): DashboardSlowContextValueContract | undefined {
+  if (value === undefined || value === null) {
+    return undefined
+  }
+
+  const parsed = readObject(value, name)
+
+  return {
+    amount: readString(parsed.amount, `${name}.amount`),
+    unit: readString(parsed.unit, `${name}.unit`),
+  }
+}
+
+function readOptionalThresholdBasis(value: unknown, name: string): DashboardSlowContextThresholdBasisContract | undefined {
+  if (value === undefined || value === null) {
+    return undefined
+  }
+
+  const parsed = readObject(value, name)
+
+  return {
+    expectedCadence: readString(parsed.expectedCadence, `${name}.expectedCadence`),
+    delayedAfterTs: readOptionalString(parsed.delayedAfterTs, `${name}.delayedAfterTs`),
+    staleAfterTs: readOptionalString(parsed.staleAfterTs, `${name}.staleAfterTs`),
+    ageReference: readOptionalString(parsed.ageReference, `${name}.ageReference`),
   }
 }
 
@@ -294,6 +378,33 @@ function readAvailability(value: unknown, name: string): DashboardAvailability {
   return parsed as DashboardAvailability
 }
 
+function readSlowContextAvailability(value: unknown, name: string): DashboardSlowContextAvailability {
+  const parsed = readString(value, name)
+  if (!validSlowContextAvailabilitySet.has(parsed as DashboardSlowContextAvailability)) {
+    fail(`${name} must be one of ${DASHBOARD_SLOW_CONTEXT_AVAILABILITIES.join(', ')}`)
+  }
+
+  return parsed as DashboardSlowContextAvailability
+}
+
+function readSlowContextFreshness(value: unknown, name: string): DashboardSlowContextFreshness {
+  const parsed = readString(value, name)
+  if (!validSlowContextFreshnessSet.has(parsed as DashboardSlowContextFreshness)) {
+    fail(`${name} must be one of ${DASHBOARD_SLOW_CONTEXT_FRESHNESS.join(', ')}`)
+  }
+
+  return parsed as DashboardSlowContextFreshness
+}
+
+function readSlowContextMetricFamily(value: unknown, name: string): DashboardSlowContextMetricFamily {
+  const parsed = readString(value, name)
+  if (!validSlowContextMetricFamilySet.has(parsed as DashboardSlowContextMetricFamily)) {
+    fail(`${name} must be one of ${DASHBOARD_SLOW_CONTEXT_METRIC_FAMILIES.join(', ')}`)
+  }
+
+  return parsed as DashboardSlowContextMetricFamily
+}
+
 function readSymbol(value: unknown, name: string): DashboardSymbol {
   const parsed = readString(value, name)
   if (!validSymbolSet.has(parsed as DashboardSymbol)) {
@@ -301,6 +412,23 @@ function readSymbol(value: unknown, name: string): DashboardSymbol {
   }
 
   return parsed as DashboardSymbol
+}
+
+function createMissingSlowContext(symbol: DashboardSymbol): DashboardSlowContextContract {
+  const asset = symbol.split('-')[0]
+
+  return {
+    asset,
+    contexts: DASHBOARD_SLOW_CONTEXT_METRIC_FAMILIES.map((metricFamily) => ({
+      metricFamily,
+      asset,
+      availability: 'unavailable',
+      freshness: 'unavailable',
+      messageKey: `${metricFamily}_unavailable`,
+      message: 'Slow context is unavailable',
+      error: 'slow-context block missing from symbol payload',
+    })),
+  }
 }
 
 function fail(message: string): never {

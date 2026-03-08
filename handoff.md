@@ -2,7 +2,7 @@
 
 ## Current Goal
 
-Continue the visibility flow by refining the remaining `slow-context-panel` epic now that dashboard-core implementation is archived.
+Begin initiative 2 by refining the first alerting wave now that initiative 1 is fully archived.
 
 ## Completed Plan Archive
 
@@ -29,11 +29,14 @@ Continue the visibility flow by refining the remaining `slow-context-panel` epic
 - `plans/completed/dashboard-detail-panels-and-symbol-switching/`
 - `plans/completed/dashboard-negative-state-mobile-a11y/`
 - `plans/completed/dashboard-fixture-smoke-matrix/`
+- `plans/completed/slow-context-source-boundaries/`
+- `plans/completed/slow-context-query-surface-and-freshness/`
+- `plans/completed/slow-context-dashboard-panel/`
 
 ## Current Recommended Next Step
 
-- Run `program-refining` for `plans/epics/slow-context-panel/`.
-- Treat `visibility-dashboard-core` as completed and archived through its child plans.
+- Run `program-refining` for `plans/epics/alert-generation-and-hygiene/`.
+- Run `program-refining` for `plans/epics/tactical-risk-state-and-permissioning/` in the same Wave 1 planning pass when capacity allows.
 
 ## Notes For Future Agents
 
@@ -59,7 +62,12 @@ Continue the visibility flow by refining the remaining `slow-context-panel` epic
 - `plans/completed/dashboard-negative-state-mobile-a11y/` now has explicit route/panel warning hierarchy, mobile-safe layout hardening, keyboard-safe navigation, and passing unit/build/desktop/mobile validation.
 - `plans/completed/dashboard-fixture-smoke-matrix/` now has the shared scenario catalog, mapper/shell matrix, and desktop/mobile Playwright smoke coverage for the final dashboard-core slice.
 - `plans/epics/visibility-dashboard-core/` now has all child features implemented and validated.
+- `plans/completed/slow-context-source-boundaries/` now has the Go-owned `services/slow-context` acquisition seam, publication-state parsing, delayed-publication tracking, correction handling, isolated source-health states, and passing targeted Go validation.
+- `plans/completed/slow-context-query-surface-and-freshness/` now has accepted-record storage, deterministic freshness classification, explicit unavailable behavior, non-blocking current-state integration, and passing targeted Go validation.
+- `plans/completed/slow-context-dashboard-panel/` now has the dashboard slow-context contract seam, advisory panel composition, deterministic scenario coverage, and passing unit/build/browser validation recorded in `plans/completed/slow-context-dashboard-panel/testing-report.md`.
+- `plans/epics/slow-context-panel/` now has all child slices archived and can be treated as complete initiative-1 context.
 - Browser validation passed by temporarily downloading Ubuntu runtime libraries locally and exporting `LD_LIBRARY_PATH`; no system package installation was required.
+- Initiative 1 is now fully implemented and archived; the next planning wave belongs to `initiatives/crypto-market-copilot-alerting-and-evaluation/`.
 - The ingestion wave is complete; do not restart it unless the user explicitly asks for follow-up work.
 
 ## Environment Reminder

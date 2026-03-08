@@ -1,0 +1,7 @@
+{
+  "sourceKey": "cme.daily.eth",
+  "metricFamily": "cme_open_interest",
+  "publishState": "not_yet_published",
+  "asset": "ETH",
+  "asOf": "2026-03-10T00:00:00Z"
+}

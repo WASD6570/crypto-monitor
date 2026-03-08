@@ -50,20 +50,30 @@ Completed initiative-1 slices already archived:
 - `plans/completed/dashboard-detail-panels-and-symbol-switching/`
 - `plans/completed/dashboard-negative-state-mobile-a11y/`
 - `plans/completed/dashboard-fixture-smoke-matrix/`
+- `plans/completed/slow-context-source-boundaries/`
+- `plans/completed/slow-context-query-surface-and-freshness/`
+- `plans/completed/slow-context-dashboard-panel/`
 
-The visibility dashboard core child queue is complete. Run `program-refining` for the remaining initiative-1 epic before any further implementation:
+Initiative 1 is now fully implemented and archived. Start initiative 2 by refining its Wave 1 epics:
 
-- `plans/epics/slow-context-panel/`
+- `plans/epics/alert-generation-and-hygiene/`
+- `plans/epics/tactical-risk-state-and-permissioning/`
 
-Source refinement handoff:
+Source handoff:
 
-- `plans/epics/slow-context-panel/00-overview.md`
+- `initiatives/crypto-market-copilot-alerting-and-evaluation/00-overview.md`
+- `initiatives/crypto-market-copilot-alerting-and-evaluation/03-handoff.md`
+- `plans/epics/alert-generation-and-hygiene/00-overview.md`
+- `plans/epics/tactical-risk-state-and-permissioning/00-overview.md`
 
 Current completion note:
 
 - `plans/completed/dashboard-fixture-smoke-matrix/` now holds the archived implementation and validation evidence for the final `visibility-dashboard-core` child feature.
+- `plans/completed/slow-context-source-boundaries/` now holds the archived implementation and validation evidence for the first `slow-context-panel` child feature.
+- `plans/completed/slow-context-query-surface-and-freshness/` now holds the archived implementation and validation evidence for the service-owned slow-context query and freshness child feature.
+- `plans/completed/slow-context-dashboard-panel/` now holds the archived implementation and validation evidence for the final `slow-context-panel` child feature.
 
-Do not start initiative 2 feature planning until initiative 1 has at least:
+Initiative 1 exit conditions needed before initiative 2 are now satisfied:
 
 - stable contract boundaries
 - deterministic replay

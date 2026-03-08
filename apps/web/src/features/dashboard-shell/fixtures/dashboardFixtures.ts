@@ -109,6 +109,58 @@ export const healthyDashboardFixture: DashboardFixture = {
   },
   degradedNotes: ['Derivatives Context is unavailable. Current-state query wiring keeps this slot explicit until a service-owned derivatives surface exists.'],
   isRefreshing: false,
+  slowContextPanel: {
+    title: 'Slow USA Context',
+    eyebrow: 'BTC institutional backdrop',
+    badgeLabel: 'Context only',
+    trustState: 'ready',
+    summary: 'These indicators update on a slower schedule than market-state feeds.',
+    note: 'Use to explain backdrop, not to gate the live state.',
+    rows: [
+      {
+        metricFamily: 'cme_volume',
+        label: 'CME volume',
+        status: 'ready',
+        valueLabel: '18,342.55 contracts',
+        freshnessLabel: 'Fresh',
+        cadenceLabel: 'Session-based publication',
+        asOfLabel: 'As of 2026-01-14 00:00:00 UTC',
+        publishedLabel: 'Published 2026-01-14 20:45:00 UTC',
+        ingestLabel: 'Ingested 2026-01-14 20:48:00 UTC',
+        previousValueLabel: 'Prev 17,880.1 contracts',
+        revisionLabel: 'Revision 1',
+        note: 'CME volume is current',
+      },
+      {
+        metricFamily: 'cme_open_interest',
+        label: 'CME open interest',
+        status: 'ready',
+        valueLabel: '9,284 contracts',
+        freshnessLabel: 'Fresh',
+        cadenceLabel: 'Session-based publication',
+        asOfLabel: 'As of 2026-01-14 00:00:00 UTC',
+        publishedLabel: 'Published 2026-01-14 20:45:00 UTC',
+        ingestLabel: 'Ingested 2026-01-14 20:48:00 UTC',
+        previousValueLabel: 'Prev 9,151.9 contracts',
+        revisionLabel: 'Revision 1',
+        note: 'CME open interest is current',
+      },
+      {
+        metricFamily: 'etf_daily_flow',
+        label: 'ETF daily flow',
+        status: 'ready',
+        valueLabel: '$245,000,000.00',
+        freshnessLabel: 'Fresh',
+        cadenceLabel: 'Daily publication',
+        asOfLabel: 'As of 2026-01-14 00:00:00 UTC',
+        publishedLabel: 'Published 2026-01-14 22:15:00 UTC',
+        ingestLabel: 'Ingested 2026-01-14 22:18:00 UTC',
+        previousValueLabel: 'Prev $198,000,000.00',
+        revisionLabel: 'Revision 1',
+        note: 'ETF daily flow is current',
+      },
+    ],
+  },
   summaries: {
     'BTC-USD': {
       symbol: 'BTC-USD',
@@ -142,6 +194,20 @@ export const degradedDashboardFixture: DashboardFixture = {
     detail: 'Timestamp trust is reduced in the service-owned payload, so the latest symbol read needs caution.',
   },
   degradedNotes: ['Coinbase freshness degraded; timestamp fallback is active for one USA confirmation stream.'],
+  slowContextPanel: {
+    ...healthyDashboardFixture.slowContextPanel,
+    trustState: 'degraded',
+    rows: healthyDashboardFixture.slowContextPanel.rows.map((row) =>
+      row.metricFamily === 'cme_open_interest'
+        ? {
+            ...row,
+            status: 'degraded',
+            freshnessLabel: 'Delayed',
+            note: 'CME open interest is delayed',
+          }
+        : row,
+    ),
+  },
   summaries: {
     ...healthyDashboardFixture.summaries,
     'ETH-USD': {
@@ -216,6 +282,20 @@ export const staleDashboardFixture: DashboardFixture = {
   },
   degradedNotes: ['Status rail is showing last-known-good shell data while one or more upstream panels are stale.'],
   lastSuccessLabel: 'Last successful refresh 2m 14s ago',
+  slowContextPanel: {
+    ...healthyDashboardFixture.slowContextPanel,
+    trustState: 'stale',
+    rows: healthyDashboardFixture.slowContextPanel.rows.map((row) =>
+      row.metricFamily === 'cme_volume'
+        ? {
+            ...row,
+            status: 'stale',
+            freshnessLabel: 'Stale',
+            note: 'CME volume is stale',
+          }
+        : row,
+    ),
+  },
   summaries: {
     ...healthyDashboardFixture.summaries,
     'BTC-USD': {
@@ -274,6 +354,25 @@ export const partialDashboardFixture: DashboardFixture = {
     detail: 'Unavailable in this shell fixture while upstream consumer wiring is still pending.',
   },
   degradedNotes: ['One lower detail region is unavailable; shell remains live so operator focus is preserved.'],
+  slowContextPanel: {
+    ...healthyDashboardFixture.slowContextPanel,
+    trustState: 'ready',
+    rows: healthyDashboardFixture.slowContextPanel.rows.map((row) =>
+      row.metricFamily === 'etf_daily_flow'
+        ? {
+            ...row,
+            status: 'unavailable',
+            valueLabel: 'Unavailable',
+            freshnessLabel: 'Unavailable',
+            publishedLabel: undefined,
+            ingestLabel: undefined,
+            previousValueLabel: undefined,
+            revisionLabel: undefined,
+            note: 'ETF daily flow is unavailable',
+          }
+        : row,
+    ),
+  },
   sections: {
     ...baseSections,
     health: {

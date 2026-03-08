@@ -19,15 +19,17 @@
 15. `plans/completed/dashboard-detail-panels-and-symbol-switching/`
 16. `plans/completed/dashboard-negative-state-mobile-a11y/`
 17. `plans/completed/dashboard-fixture-smoke-matrix/`
+18. `plans/completed/slow-context-source-boundaries/`
+19. `plans/completed/slow-context-query-surface-and-freshness/`
+20. `plans/completed/slow-context-dashboard-panel/`
 
 ## Epic Queue
 
-These remaining slices currently live as epics under `plans/epics/` and need refinement before implementation.
+All initiative-1 epics now have their child features implemented and archived.
 
 - `world-usa-composites-and-market-state` now has all child features implemented, including `market-state-history-and-audit-reads`.
 - `visibility-dashboard-core` now has all child features implemented, including `dashboard-fixture-smoke-matrix`.
-
-1. `slow-context-panel`
+- `slow-context-panel` now has all child features implemented, including `slow-context-dashboard-panel`.
 
 ## Planning Waves
 

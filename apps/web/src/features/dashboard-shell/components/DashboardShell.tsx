@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import {
   DASHBOARD_SECTIONS,
   DASHBOARD_SYMBOLS,
@@ -26,8 +27,15 @@ function sectionToneClass(status: DashboardFixture['trustState']) {
   return `section-slot section-slot--${status}`
 }
 
+function warningToneClass(tone: DashboardFixture['trustState']) {
+  return `warning-band warning-band--${tone}`
+}
+
 export function DashboardShell({ fixture, onRetry, routeState }: DashboardShellProps) {
+  const shellId = useId()
   const focusedSummary = fixture.summaries[routeState.symbol]
+  const detailShellId = `${shellId}-detail-shell`
+  const focusedWarningId = focusedSummary.warning ? `${shellId}-${routeState.symbol}-focused-warning` : undefined
 
   return (
     <main className="app-shell">
@@ -57,6 +65,14 @@ export function DashboardShell({ fixture, onRetry, routeState }: DashboardShellP
               </button>
             </div>
           </div>
+          {fixture.primaryWarning ? (
+            <DashboardWarningBand
+              ariaLive="polite"
+              className="status-rail__warning"
+              dataTestId="route-warning"
+              warning={fixture.primaryWarning}
+            />
+          ) : null}
           <dl className="status-metrics">
             <div>
               <dt>As of</dt>
@@ -92,10 +108,18 @@ export function DashboardShell({ fixture, onRetry, routeState }: DashboardShellP
           {DASHBOARD_SYMBOLS.map((symbol) => {
             const summary = fixture.summaries[symbol]
             const isActive = routeState.symbol === symbol
+            const summaryWarningId = summary.warning ? `${shellId}-${symbol}-summary-warning` : undefined
+            const summaryTrustId = `${shellId}-${symbol}-summary-trust`
+            const summaryFreshnessId = `${shellId}-${symbol}-summary-freshness`
+            const summaryDescription = [summaryTrustId, summaryFreshnessId, summaryWarningId].filter(Boolean).join(' ')
 
             return (
               <button
                 key={symbol}
+                aria-controls={detailShellId}
+                aria-current={isActive ? 'true' : undefined}
+                aria-describedby={summaryDescription}
+                aria-label={`${summary.symbol} ${summary.stateLabel}. Trust ${summary.trustState}.${isActive ? ' Focused symbol.' : ' Activate focused symbol.'}`}
                 aria-pressed={isActive}
                 className={`summary-card ${isActive ? 'summary-card--active' : ''}`}
                 data-testid={`summary-card-${symbol}`}
@@ -108,10 +132,13 @@ export function DashboardShell({ fixture, onRetry, routeState }: DashboardShellP
                     <p className="summary-card__state">{summary.stateLabel}</p>
                   </div>
                   <div className="summary-card__badges">
-                    <span className={trustToneClass(summary.trustState)}>{summary.trustState}</span>
+                    <span className={trustToneClass(summary.trustState)} id={summaryTrustId}>{summary.trustState}</span>
                     {isActive ? <span className="focus-pill">Focused</span> : null}
                   </div>
                 </div>
+                {summary.warning ? (
+                  <DashboardWarningBand className="summary-card__warning" id={summaryWarningId} warning={summary.warning} />
+                ) : null}
                 <ul className="reason-stack">
                   {summary.reasons.map((reason) => (
                     <li key={reason}>{reason}</li>
@@ -119,7 +146,7 @@ export function DashboardShell({ fixture, onRetry, routeState }: DashboardShellP
                 </ul>
                 <div className="summary-card__footer">
                   <p>{summary.comparisonLabel}</p>
-                  <p>{summary.freshnessLabel}</p>
+                  <p id={summaryFreshnessId}>{summary.freshnessLabel}</p>
                 </div>
                 <time className="summary-card__time" dateTime={summary.lastUpdated}>
                   {formatReadableTime(summary.lastUpdated)}
@@ -130,11 +157,11 @@ export function DashboardShell({ fixture, onRetry, routeState }: DashboardShellP
           })}
         </section>
 
-        <section aria-label="Focused symbol detail shell" className="detail-shell">
+        <section aria-label="Focused symbol detail shell" className="detail-shell" id={detailShellId}>
           <div className="detail-shell__header">
             <div>
               <p className="eyebrow">Focused symbol</p>
-              <h2 data-testid="focused-symbol-heading">{focusedSummary.symbol} current-state shell</h2>
+              <h2 aria-live="polite" data-testid="focused-symbol-heading">{focusedSummary.symbol} current-state shell</h2>
             </div>
             <p className="detail-shell__trust-copy">
               Trust stays visible at the top of every section. This shell never recomputes market
@@ -142,25 +169,47 @@ export function DashboardShell({ fixture, onRetry, routeState }: DashboardShellP
             </p>
             <span className={trustToneClass(focusedSummary.trustState)}>{focusedSummary.trustState}</span>
           </div>
+          {focusedSummary.warning ? (
+            <DashboardWarningBand
+              ariaLive="polite"
+              className="detail-shell__warning"
+              dataTestId="focused-symbol-warning"
+              id={focusedWarningId}
+              warning={focusedSummary.warning}
+            />
+          ) : null}
 
           <nav aria-label="Dashboard sections" className="section-nav">
-            {DASHBOARD_SECTIONS.map((section) => (
-              <button
-                key={section}
-                aria-pressed={routeState.section === section}
-                className={`section-nav__button ${routeState.section === section ? 'section-nav__button--active' : ''}`}
-                onClick={() => routeState.setSection(section)}
-                type="button"
-              >
-                {fixture.focusedPanels[section].title}
-              </button>
-            ))}
+            {DASHBOARD_SECTIONS.map((section) => {
+              const isActive = routeState.section === section
+              const panel = fixture.focusedPanels[section]
+              const panelId = `${shellId}-panel-${section}`
+              const panelWarningId = panel.warning ? `${panelId}-warning` : undefined
+              const panelTrustId = `${panelId}-trust`
+              const buttonDescription = [panelTrustId, panelWarningId, focusedWarningId].filter(Boolean).join(' ')
+
+              return (
+                <button
+                  key={section}
+                  aria-controls={panelId}
+                  aria-current={isActive ? 'true' : undefined}
+                  aria-describedby={buttonDescription}
+                  aria-pressed={isActive}
+                  className={`section-nav__button ${isActive ? 'section-nav__button--active' : ''}`}
+                  onClick={() => routeState.setSection(section)}
+                  type="button"
+                >
+                  {panel.title}
+                </button>
+              )
+            })}
           </nav>
 
           <div className="detail-grid">
             {DASHBOARD_SECTIONS.map((section) => (
               <DashboardFocusedPanelCard
                 active={routeState.section === section}
+                id={`${shellId}-panel-${section}`}
                 key={section}
                 panel={fixture.focusedPanels[section]}
               />
@@ -174,23 +223,32 @@ export function DashboardShell({ fixture, onRetry, routeState }: DashboardShellP
 
 type DashboardFocusedPanelCardProps = {
   active: boolean
+  id: string
   panel: DashboardFixture['focusedPanels'][DashboardSectionKey]
 }
 
-function DashboardFocusedPanelCard({ active, panel }: DashboardFocusedPanelCardProps) {
+function DashboardFocusedPanelCard({ active, id, panel }: DashboardFocusedPanelCardProps) {
+  const headingId = `${id}-heading`
+  const warningId = panel.warning ? `${id}-warning` : undefined
+  const noteId = panel.note ? `${id}-note` : undefined
+
   return (
     <section
-      aria-label={panel.title}
+      aria-describedby={[warningId, noteId].filter(Boolean).join(' ') || undefined}
+      aria-labelledby={headingId}
       className={`${sectionToneClass(panel.trustState)} ${active ? 'section-slot--active' : ''}`}
       data-testid={`section-slot-${panel.key}`}
+      id={id}
+      role="region"
     >
       <div className="section-slot__header">
         <div>
           <p className="eyebrow">{panel.eyebrow ?? (active ? 'Active section' : 'Focused section')}</p>
-          <h3>{panel.title}</h3>
+          <h3 id={headingId}>{panel.title}</h3>
         </div>
-        <span className={trustToneClass(panel.trustState)}>{panel.trustState}</span>
+        <span className={trustToneClass(panel.trustState)} id={`${id}-trust`}>{panel.trustState}</span>
       </div>
+      {panel.warning ? <DashboardWarningBand className="section-slot__warning" id={warningId} warning={panel.warning} /> : null}
       <p>{panel.summary}</p>
       {panel.metrics.length > 0 ? (
         <dl className="panel-metrics" aria-label={`${panel.title} metrics`}>
@@ -202,7 +260,7 @@ function DashboardFocusedPanelCard({ active, panel }: DashboardFocusedPanelCardP
           ))}
         </dl>
       ) : null}
-      {panel.note ? <p className="inline-note">{panel.note}</p> : null}
+      {panel.note ? <p className="inline-note" id={noteId}>{panel.note}</p> : null}
       {panel.reasons.length > 0 ? (
         <ul className="reason-stack" aria-label={`${panel.title} reasons`}>
           {panel.reasons.map((reason) => (
@@ -211,5 +269,28 @@ function DashboardFocusedPanelCard({ active, panel }: DashboardFocusedPanelCardP
         </ul>
       ) : null}
     </section>
+  )
+}
+
+type DashboardWarningBandProps = {
+  ariaLive?: 'polite' | 'assertive'
+  className?: string
+  dataTestId?: string
+  id?: string
+  warning: NonNullable<DashboardFixture['primaryWarning']>
+}
+
+function DashboardWarningBand({ ariaLive, className, dataTestId, id, warning }: DashboardWarningBandProps) {
+  return (
+    <div
+      aria-live={ariaLive}
+      className={`${warningToneClass(warning.tone)} ${className ?? ''}`.trim()}
+      data-testid={dataTestId}
+      id={id}
+      role="note"
+    >
+      <p className="warning-band__label">{warning.label}</p>
+      <p className="warning-band__detail">{warning.detail}</p>
+    </div>
   )
 }

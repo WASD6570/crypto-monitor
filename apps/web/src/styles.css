@@ -219,6 +219,46 @@ a {
   padding-left: 0;
 }
 
+.warning-band {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(242, 237, 229, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.warning-band--degraded {
+  border-color: rgba(242, 179, 93, 0.32);
+  background: rgba(242, 179, 93, 0.08);
+}
+
+.warning-band--stale {
+  border-color: rgba(255, 141, 115, 0.34);
+  background: rgba(255, 141, 115, 0.08);
+}
+
+.warning-band--unavailable {
+  border-color: rgba(157, 150, 167, 0.34);
+  background: rgba(157, 150, 167, 0.12);
+}
+
+.warning-band__label,
+.warning-band__detail {
+  margin: 0;
+}
+
+.warning-band__label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.warning-band__detail {
+  color: var(--muted);
+}
+
 .summary-strip {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -230,6 +270,7 @@ a {
   cursor: pointer;
   display: grid;
   gap: 16px;
+  min-block-size: 44px;
   min-height: 100%;
   text-align: left;
   transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
@@ -365,9 +406,9 @@ a {
 }
 
 .section-nav {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .section-nav__button {
@@ -378,6 +419,8 @@ a {
   cursor: pointer;
   min-height: 44px;
   padding: 10px 14px;
+  text-align: left;
+  width: 100%;
 }
 
 .section-nav__button--active {
@@ -433,6 +476,13 @@ a {
   background: linear-gradient(180deg, rgba(157, 150, 167, 0.08), rgba(25, 26, 31, 0.94));
 }
 
+.status-rail__warning,
+.detail-shell__warning,
+.summary-card__warning,
+.section-slot__warning {
+  margin: 0;
+}
+
 @media (max-width: 860px) {
   .app-shell {
     padding: 20px 14px 32px;
@@ -455,6 +505,10 @@ a {
     grid-template-columns: 1fr;
   }
 
+  .section-nav {
+    grid-template-columns: 1fr;
+  }
+
   .summary-card__header,
   .section-slot__header,
   .detail-shell__header {
@@ -474,6 +528,6 @@ a {
   }
 
   .section-nav__button {
-    flex: 1 1 100%;
+    padding: 12px 14px;
   }
 }

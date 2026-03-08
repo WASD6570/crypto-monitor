@@ -1,6 +1,13 @@
 export type DashboardTrustState = 'loading' | 'ready' | 'stale' | 'degraded' | 'unavailable'
 export type DashboardSymbol = 'BTC-USD' | 'ETH-USD'
 export type DashboardSectionKey = 'overview' | 'microstructure' | 'derivatives' | 'health'
+export type DashboardWarningTone = Exclude<DashboardTrustState, 'loading' | 'ready'>
+
+export type DashboardWarning = {
+  tone: DashboardWarningTone
+  label: string
+  detail: string
+}
 
 export type DashboardSummary = {
   symbol: DashboardSymbol
@@ -11,6 +18,7 @@ export type DashboardSummary = {
   freshnessLabel: string
   comparisonLabel: string
   timestampNote?: string
+  warning?: DashboardWarning
 }
 
 export type DashboardSectionState = {
@@ -35,6 +43,7 @@ export type DashboardFocusedPanel = {
   metrics: DashboardPanelMetric[]
   reasons: string[]
   note?: string
+  warning?: DashboardWarning
 }
 
 export type DashboardViewModel = {
@@ -43,6 +52,7 @@ export type DashboardViewModel = {
   configVersion: string
   algorithmVersion: string
   trustState: DashboardTrustState
+  primaryWarning?: DashboardWarning
   degradedNotes: string[]
   isRefreshing: boolean
   lastSuccessLabel?: string

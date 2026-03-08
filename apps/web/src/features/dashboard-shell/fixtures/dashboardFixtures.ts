@@ -74,6 +74,11 @@ const baseFocusedPanels = {
       { label: 'Contract seam', value: 'Current-state derivatives context not yet exposed' },
     ],
     reasons: [],
+    warning: {
+      tone: 'unavailable',
+      label: 'Derivatives Context unavailable',
+      detail: 'Derivatives context is not present in the current-state contract yet, so this slot stays explicit.',
+    },
   },
   health: {
     key: 'health',
@@ -97,6 +102,11 @@ export const healthyDashboardFixture: DashboardFixture = {
   configVersion: 'visibility.v1.3.2',
   algorithmVersion: 'symbol-global-regime.v1',
   trustState: 'degraded',
+  primaryWarning: {
+    tone: 'degraded',
+    label: 'Derivatives Context unavailable',
+    detail: 'The dashboard keeps the missing derivatives contract seam visible instead of inventing client-side logic.',
+  },
   degradedNotes: ['Derivatives Context is unavailable. Current-state query wiring keeps this slot explicit until a service-owned derivatives surface exists.'],
   isRefreshing: false,
   summaries: {
@@ -126,6 +136,11 @@ export const healthyDashboardFixture: DashboardFixture = {
 export const degradedDashboardFixture: DashboardFixture = {
   ...healthyDashboardFixture,
   trustState: 'degraded',
+  primaryWarning: {
+    tone: 'degraded',
+    label: 'ETH-USD trust reduced',
+    detail: 'Timestamp trust is reduced in the service-owned payload, so the latest symbol read needs caution.',
+  },
   degradedNotes: ['Coinbase freshness degraded; timestamp fallback is active for one USA confirmation stream.'],
   summaries: {
     ...healthyDashboardFixture.summaries,
@@ -135,6 +150,11 @@ export const degradedDashboardFixture: DashboardFixture = {
       freshnessLabel: '47s old',
       reasons: ['USA confirmation degraded', 'Fallback recvTs in use', 'Keep ETH informational until freshness recovers'],
       timestampNote: 'Last state uses recvTs fallback after exchangeTs plausibility failure.',
+      warning: {
+        tone: 'degraded',
+        label: 'ETH-USD trust reduced',
+        detail: 'Timestamp trust is reduced in the service-owned payload, so the latest symbol read needs caution.',
+      },
     },
   },
   focusedPanels: {
@@ -152,6 +172,11 @@ export const degradedDashboardFixture: DashboardFixture = {
       ],
       reasons: ['Timestamp Trust Loss', 'Feed Health Degraded'],
       note: 'Showing the last-known-good overview while degraded trust cues stay visible.',
+      warning: {
+        tone: 'degraded',
+        label: 'Overview degraded',
+        detail: 'Showing the last-known-good overview while degraded trust cues stay visible.',
+      },
     },
     derivatives: {
       ...baseFocusedPanels.derivatives,
@@ -171,6 +196,11 @@ export const degradedDashboardFixture: DashboardFixture = {
         { label: 'Global as of', value: '2026-01-15 14:32:10 UTC' },
       ],
       reasons: ['Global Shared Watch', 'Timestamp Trust Loss'],
+      warning: {
+        tone: 'degraded',
+        label: 'Feed Health And Regime degraded',
+        detail: 'Global Shared Watch',
+      },
     },
   },
 }
@@ -179,6 +209,11 @@ export const staleDashboardFixture: DashboardFixture = {
   ...healthyDashboardFixture,
   trustState: 'stale',
   oldestAgeLabel: '2m 14s oldest critical panel age',
+  primaryWarning: {
+    tone: 'stale',
+    label: 'BTC-USD current state stale',
+    detail: 'Showing the last-known-good symbol state after refresh failure; do not assume live confirmation.',
+  },
   degradedNotes: ['Status rail is showing last-known-good shell data while one or more upstream panels are stale.'],
   lastSuccessLabel: 'Last successful refresh 2m 14s ago',
   summaries: {
@@ -188,6 +223,11 @@ export const staleDashboardFixture: DashboardFixture = {
       trustState: 'stale',
       freshnessLabel: '2m 14s old',
       reasons: ['Last-known-good state preserved', 'Do not assume current tape confirmation'],
+      warning: {
+        tone: 'stale',
+        label: 'BTC-USD current state stale',
+        detail: 'Showing the last-known-good symbol state after refresh failure; do not assume live confirmation.',
+      },
     },
   },
   focusedPanels: {
@@ -196,16 +236,31 @@ export const staleDashboardFixture: DashboardFixture = {
       ...baseFocusedPanels.overview,
       trustState: 'stale',
       note: 'Showing the last-known-good overview while the latest refresh is stale.',
+      warning: {
+        tone: 'stale',
+        label: 'Overview stale',
+        detail: 'Showing the last-known-good overview while the latest refresh is stale.',
+      },
     },
     microstructure: {
       ...baseFocusedPanels.microstructure,
       trustState: 'stale',
       note: 'Microstructure stays visible from cached data while the latest refresh is stale.',
+      warning: {
+        tone: 'stale',
+        label: 'Microstructure stale',
+        detail: 'Microstructure stays visible from cached data while the latest refresh is stale.',
+      },
     },
     health: {
       ...baseFocusedPanels.health,
       trustState: 'stale',
       note: 'Feed-health context is using the last successful payload until refresh recovers.',
+      warning: {
+        tone: 'stale',
+        label: 'Feed Health And Regime stale',
+        detail: 'Feed-health context is using the last successful payload until refresh recovers.',
+      },
     },
   },
 }
@@ -213,6 +268,11 @@ export const staleDashboardFixture: DashboardFixture = {
 export const partialDashboardFixture: DashboardFixture = {
   ...healthyDashboardFixture,
   trustState: 'degraded',
+  primaryWarning: {
+    tone: 'unavailable',
+    label: 'Feed Health And Regime unavailable',
+    detail: 'Unavailable in this shell fixture while upstream consumer wiring is still pending.',
+  },
   degradedNotes: ['One lower detail region is unavailable; shell remains live so operator focus is preserved.'],
   sections: {
     ...baseSections,
@@ -232,6 +292,11 @@ export const partialDashboardFixture: DashboardFixture = {
       summary: 'Feed-health and global ceiling context are unavailable, so summary trust is reduced.',
       metrics: [],
       note: 'Unavailable in this shell fixture while upstream consumer wiring is still pending.',
+      warning: {
+        tone: 'unavailable',
+        label: 'Feed Health And Regime unavailable',
+        detail: 'Unavailable in this shell fixture while upstream consumer wiring is still pending.',
+      },
     },
   },
 }

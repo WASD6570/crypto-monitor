@@ -48,18 +48,20 @@ Completed initiative-1 slices already archived:
 - `plans/completed/dashboard-query-adapters-and-trust-state/`
 - `plans/completed/market-state-history-and-audit-reads/`
 - `plans/completed/dashboard-detail-panels-and-symbol-switching/`
+- `plans/completed/dashboard-negative-state-mobile-a11y/`
+- `plans/completed/dashboard-fixture-smoke-matrix/`
 
-Run `feature-planning` for the next active child feature inside initiative 1:
+The visibility dashboard core child queue is complete. Run `program-refining` for the remaining initiative-1 epic before any further implementation:
 
-- `dashboard-negative-state-mobile-a11y`
+- `plans/epics/slow-context-panel/`
 
 Source refinement handoff:
 
-- `plans/epics/visibility-dashboard-core/92-refinement-handoff.md`
+- `plans/epics/slow-context-panel/00-overview.md`
 
-Parallel-safe follow-up child feature after that:
+Current completion note:
 
-- `feature-planning` for `dashboard-fixture-smoke-matrix` once negative-state/mobile behavior is bounded
+- `plans/completed/dashboard-fixture-smoke-matrix/` now holds the archived implementation and validation evidence for the final `visibility-dashboard-core` child feature.
 
 Do not start initiative 2 feature planning until initiative 1 has at least:
 

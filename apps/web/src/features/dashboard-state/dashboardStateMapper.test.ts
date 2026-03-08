@@ -5,8 +5,83 @@ import {
   healthyDashboardResponses,
   partialDashboardResponses,
 } from './dashboardStateFixtures'
+import { createDashboardScenarioState, type DashboardScenarioName } from '../../test/dashboardScenarioCatalog'
 
 describe('dashboard state mapper', () => {
+  test.each<{ name: DashboardScenarioName; assert: (viewModel: ReturnType<typeof deriveDashboardViewModel>['viewModel']) => void }>([
+    {
+      name: 'healthy',
+      assert(viewModel: ReturnType<typeof deriveDashboardViewModel>['viewModel']) {
+        expect(viewModel.summaries['BTC-USD'].trustState).toBe('ready')
+        expect(viewModel.summaries['ETH-USD'].warning).toBeUndefined()
+        expect(viewModel.focusedPanels.overview.summary).toContain('BTC-USD is TRADEABLE')
+        expect(viewModel.primaryWarning).toEqual(
+          expect.objectContaining({ label: 'Derivatives Context unavailable' }),
+        )
+      },
+    },
+    {
+      name: 'degraded',
+      assert(viewModel: ReturnType<typeof deriveDashboardViewModel>['viewModel']) {
+        expect(viewModel.summaries['ETH-USD'].trustState).toBe('degraded')
+        expect(viewModel.summaries['ETH-USD'].warning).toEqual(
+          expect.objectContaining({ label: 'ETH-USD trust reduced' }),
+        )
+        expect(viewModel.focusedPanels.health.warning).toEqual(
+          expect.objectContaining({ label: 'Feed Health And Regime degraded' }),
+        )
+        expect(viewModel.primaryWarning).toEqual(
+          expect.objectContaining({ label: 'ETH-USD trust reduced' }),
+        )
+      },
+    },
+    {
+      name: 'stale',
+      assert(viewModel: ReturnType<typeof deriveDashboardViewModel>['viewModel']) {
+        expect(viewModel.summaries['BTC-USD'].trustState).toBe('stale')
+        expect(viewModel.focusedPanels.overview.warning).toEqual(
+          expect.objectContaining({ label: 'Overview stale' }),
+        )
+        expect(viewModel.primaryWarning).toEqual(
+          expect.objectContaining({ label: 'Global trust stale' }),
+        )
+      },
+    },
+    {
+      name: 'partial',
+      assert(viewModel: ReturnType<typeof deriveDashboardViewModel>['viewModel']) {
+        expect(viewModel.summaries['ETH-USD'].warning).toEqual(
+          expect.objectContaining({ label: 'ETH-USD partial inputs' }),
+        )
+        expect(viewModel.focusedPanels.microstructure.warning).toEqual(
+          expect.objectContaining({ detail: 'Missing Input' }),
+        )
+        expect(viewModel.sections.derivatives.status).toBe('unavailable')
+      },
+    },
+    {
+      name: 'unavailable',
+      assert(viewModel: ReturnType<typeof deriveDashboardViewModel>['viewModel']) {
+        expect(viewModel.summaries['BTC-USD'].trustState).toBe('ready')
+        expect(viewModel.summaries['ETH-USD'].warning).toEqual(
+          expect.objectContaining({ label: 'ETH-USD current state unavailable' }),
+        )
+        expect(viewModel.focusedPanels.overview.trustState).toBe('unavailable')
+        expect(viewModel.focusedPanels.health.trustState).toBe('ready')
+      },
+    },
+  ])('keeps $name scenario trust and fallback states honest', ({ name, assert }) => {
+    const scenario = createDashboardScenarioState(name)
+
+    const derived = deriveDashboardViewModel({
+      state: scenario.state,
+      focusedSymbol: scenario.focusedSymbol,
+      nowMs: scenario.nowMs,
+    })
+
+    assert(derived.viewModel)
+  })
+
   test('keeps unaffected surfaces visible when one symbol response is partial', () => {
     const state = createInitialDashboardDataState()
     state.global = {
@@ -45,6 +120,25 @@ describe('dashboard state mapper', () => {
         expect.objectContaining({ label: 'Focused availability', value: 'degraded' }),
       ]),
     )
+    expect(derived.viewModel.summaries['ETH-USD'].warning).toEqual(
+      expect.objectContaining({
+        tone: 'degraded',
+        label: 'ETH-USD partial inputs',
+      }),
+    )
+    expect(derived.viewModel.focusedPanels.microstructure.warning).toEqual(
+      expect.objectContaining({
+        tone: 'degraded',
+        label: 'Microstructure degraded',
+        detail: 'Missing Input',
+      }),
+    )
+    expect(derived.viewModel.primaryWarning).toEqual(
+      expect.objectContaining({
+        tone: 'degraded',
+        label: 'ETH-USD partial inputs',
+      }),
+    )
     expect(derived.viewModel.focusedPanels.derivatives.summary).toMatch(/not present in the current-state contract yet/i)
     expect(derived.viewModel.trustState).toBe('degraded')
   })
@@ -79,7 +173,25 @@ describe('dashboard state mapper', () => {
 
     expect(derived.viewModel.summaries['BTC-USD'].trustState).toBe('stale')
     expect(derived.viewModel.sections.overview.status).toBe('stale')
+    expect(derived.viewModel.summaries['BTC-USD'].warning).toEqual(
+      expect.objectContaining({
+        tone: 'stale',
+        label: 'BTC-USD current state stale',
+      }),
+    )
     expect(derived.viewModel.focusedPanels.overview.note).toMatch(/last-known-good overview/i)
+    expect(derived.viewModel.focusedPanels.overview.warning).toEqual(
+      expect.objectContaining({
+        tone: 'stale',
+        label: 'Overview stale',
+      }),
+    )
+    expect(derived.viewModel.primaryWarning).toEqual(
+      expect.objectContaining({
+        tone: 'stale',
+        label: 'Global trust stale',
+      }),
+    )
     expect(derived.viewModel.focusedPanels.health.note).toMatch(/last successful payload/i)
     expect(derived.viewModel.degradedNotes.join(' ')).toMatch(/stale/i)
   })
@@ -126,5 +238,11 @@ describe('dashboard state mapper', () => {
       label: 'Focused symbol',
       value: 'ETH-USD',
     })
+    expect(btcDerived.viewModel.primaryWarning).toEqual(
+      expect.objectContaining({
+        tone: 'degraded',
+        label: 'Derivatives Context unavailable',
+      }),
+    )
   })
 })

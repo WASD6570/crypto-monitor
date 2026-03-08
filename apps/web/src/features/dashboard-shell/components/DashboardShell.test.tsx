@@ -1,16 +1,11 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { vi } from 'vitest'
 import { describe, expect, test } from 'vitest'
 import type { DashboardClient } from '../../../api/dashboard/dashboardClient'
 import { DashboardPage } from '../../../pages/dashboard/DashboardPage'
-import type { DashboardFixture, DashboardSymbol } from '../model/dashboardShellModel'
+import type { DashboardFixture } from '../model/dashboardShellModel'
 import { DASHBOARD_STALE_AFTER_MS, type DashboardClock } from '../../dashboard-state/dashboardQueryState'
-import {
-  createStaticDashboardClient,
-  degradedDashboardResponses,
-  healthyDashboardResponses,
-} from '../../dashboard-state/dashboardStateFixtures'
+import { createDashboardScenarioClient } from '../../../test/dashboardScenarioCatalog'
 import {
   degradedDashboardFixture,
   partialDashboardFixture,
@@ -45,14 +40,17 @@ describe('Dashboard shell', () => {
     expect(screen.getByText('Trusted bucket')).toBeInTheDocument()
   })
 
-  test('switches focus to ETH while keeping both summary cards visible', async () => {
+  test('switches focus to ETH from the keyboard while keeping both summary cards visible', async () => {
     const user = userEvent.setup()
     renderAt('/dashboard', { fixture: healthyDashboardFixture })
 
-    await user.click(screen.getByRole('button', { name: /ETH-USD/i }))
+    const ethButton = screen.getByRole('button', { name: /ETH-USD WATCH/i })
+    ethButton.focus()
+    await user.keyboard('{Enter}')
 
     expect(screen.getByTestId('focused-symbol-heading')).toHaveTextContent('ETH-USD')
     expect(screen.getByTestId('summary-card-BTC-USD')).toBeInTheDocument()
+    expect(screen.getByTestId('summary-card-ETH-USD')).toHaveAttribute('aria-current', 'true')
     expect(window.location.search).toContain('symbol=ETH-USD')
   })
 
@@ -78,8 +76,12 @@ describe('Dashboard shell', () => {
       />,
     )
 
+    expect(screen.getByTestId('route-warning')).toHaveTextContent('ETH-USD trust reduced')
     expect(screen.getByText(/Coinbase freshness degraded/i)).toBeInTheDocument()
     expect(screen.getByText(/recvTs fallback/i)).toBeInTheDocument()
+    expect(
+      screen.getAllByText(/Showing the last-known-good overview while degraded trust cues stay visible/i).length,
+    ).toBeGreaterThan(0)
     expect(screen.getAllByText('WATCH').length).toBeGreaterThan(0)
   })
 
@@ -99,13 +101,33 @@ describe('Dashboard shell', () => {
 
     expect(screen.getByTestId('summary-strip')).toBeInTheDocument()
     expect(screen.getByTestId('section-slot-health')).toHaveTextContent('unavailable')
+    expect(screen.getByTestId('route-warning')).toHaveTextContent('Feed Health And Regime unavailable')
     expect(screen.getByTestId('section-slot-overview')).toHaveTextContent('Focused symbol regime')
   })
 
+  test('keeps active section semantics and focused warning copy visible through keyboard navigation', async () => {
+    const user = userEvent.setup()
+
+    renderAt('/dashboard?symbol=ETH-USD&section=overview', { fixture: degradedDashboardFixture })
+
+    const healthButton = screen.getByRole('button', { name: 'Feed Health And Regime' })
+    healthButton.focus()
+
+    expect(screen.getByTestId('focused-symbol-warning')).toHaveTextContent('ETH-USD trust reduced')
+    expect(screen.getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-current', 'true')
+    expect(healthButton).toHaveAttribute('aria-describedby')
+
+    await user.keyboard('{Enter}')
+
+    expect(screen.getByRole('button', { name: 'Feed Health And Regime' })).toHaveAttribute('aria-current', 'true')
+    expect(window.location.search).toContain('section=health')
+  })
+
   test('loads adapter-backed responses through the page and keeps degraded trust notes visible', async () => {
-    renderAt('/dashboard', { client: createStaticDashboardClient(degradedDashboardResponses) })
+    renderAt('/dashboard', { client: createDashboardScenarioClient('degraded') })
 
     expect(await screen.findByTestId('summary-card-BTC-USD')).toBeInTheDocument()
+    expect(screen.getByTestId('route-warning')).toBeInTheDocument()
     expect(await screen.findByText(/Timestamp trust is reduced/i)).toBeInTheDocument()
     expect(screen.getByText(/Derivatives Context is unavailable/i)).toBeInTheDocument()
     expect(screen.getAllByText('Global ceiling').length).toBeGreaterThan(0)
@@ -114,7 +136,7 @@ describe('Dashboard shell', () => {
   test('switches focused panel content with the symbol while keeping peer summaries visible', async () => {
     const user = userEvent.setup()
 
-    renderAt('/dashboard', { client: createStaticDashboardClient(healthyDashboardResponses) })
+    renderAt('/dashboard', { client: createDashboardScenarioClient('healthy') })
 
     expect(await screen.findByTestId('summary-card-BTC-USD')).toBeInTheDocument()
     expect(screen.getByTestId('section-slot-overview')).toHaveTextContent('BTC-USD is TRADEABLE')
@@ -130,32 +152,26 @@ describe('Dashboard shell', () => {
     expect(window.location.search).toContain('symbol=ETH-USD')
   })
 
+  test('keeps unavailable focused-symbol fallback explicit while peer summaries stay visible', async () => {
+    renderAt('/dashboard?symbol=ETH-USD&section=overview', { client: createDashboardScenarioClient('unavailable') })
+
+    expect(await screen.findByTestId('summary-card-BTC-USD')).toBeInTheDocument()
+    expect(screen.getByTestId('summary-card-ETH-USD')).toHaveTextContent('Unavailable')
+    expect(screen.getByTestId('route-warning')).toHaveTextContent('Global trust unavailable')
+    expect(screen.getByTestId('focused-symbol-warning')).toHaveTextContent('ETH-USD current state unavailable')
+    expect(screen.getByTestId('section-slot-overview')).toHaveTextContent('ETH-USD overview is unavailable')
+    expect(screen.getByTestId('section-slot-health')).toHaveTextContent('Global ceiling')
+  })
+
   test('keeps last-known-good state visible after a failed refresh', async () => {
     const user = userEvent.setup()
     let nowMs = Date.parse('2026-01-15T14:32:20Z')
     const clock: DashboardClock = {
       now: () => nowMs,
     }
-    let globalCalls = 0
-    let symbolCalls = 0
-    const client: DashboardClient = {
-      getGlobalState: vi.fn(async () => {
-        globalCalls += 1
-        if (globalCalls === 1) {
-          return structuredClone(healthyDashboardResponses.global)
-        }
-
-        throw new Error('current-state request failed: 503 Service Unavailable')
-      }),
-      getSymbolState: vi.fn(async (symbol) => {
-        symbolCalls += 1
-        if (symbolCalls <= 2) {
-          return structuredClone(healthyDashboardResponses.symbols[symbol as DashboardSymbol])
-        }
-
-        throw new Error('current-state request failed: 503 Service Unavailable')
-      }),
-    }
+    const client: DashboardClient = createDashboardScenarioClient('stale', {
+      baseMs: Date.parse('2026-01-15T14:32:20Z'),
+    })
 
     renderAt('/dashboard', { client, clock })
 
@@ -166,6 +182,7 @@ describe('Dashboard shell', () => {
 
     expect((await screen.findAllByText(/^stale$/i)).length).toBeGreaterThan(0)
     expect(screen.getByTestId('summary-card-BTC-USD')).toHaveTextContent('TRADEABLE')
+    expect(screen.getByTestId('route-warning')).toHaveTextContent('Global trust stale')
     expect((await screen.findAllByText(/last-known-good current state/i)).length).toBeGreaterThan(0)
   })
 })

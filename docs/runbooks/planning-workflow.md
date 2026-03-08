@@ -148,6 +148,8 @@ The feature planner should read:
 
 Then it should read any relevant epic under `plans/epics/{epic_name}/` and write the active feature plan under `plans/{feature_name}/`.
 
+Active feature plans remain in `plans/{feature_name}/` only until implementation and validation are complete. After that, move the full plan directory, including `testing-report.md`, to `plans/completed/{feature_name}/` and update handoff references to the archive path.
+
 ### 4. Use Parallel Refinement And Planning In Waves
 
 When dependencies allow, use OpenCode subagents to refine multiple epics in parallel and then plan multiple bounded child features in parallel.

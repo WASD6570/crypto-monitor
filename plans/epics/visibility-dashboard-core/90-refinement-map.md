@@ -54,13 +54,13 @@ Completed child feature coverage now also exists in:
 ### Wave 3
 
 - `dashboard-detail-panels-and-symbol-switching` (completed; archived under `plans/completed/dashboard-detail-panels-and-symbol-switching/`)
-- `dashboard-negative-state-mobile-a11y`
+- `dashboard-negative-state-mobile-a11y` (completed; archived under `plans/completed/dashboard-negative-state-mobile-a11y/`)
 - Why here: panel composition and negative-state/mobile behavior depend on the shell and query-state model, but they can be planned as separate implementation slices once those boundaries are stable.
 
 ### Wave 4
 
-- `dashboard-fixture-smoke-matrix`
-- Why last: integrated fixture, build, and Playwright coverage should validate the composed dashboard after the UI slices above are defined.
+- `dashboard-fixture-smoke-matrix` (completed; archived under `plans/completed/dashboard-fixture-smoke-matrix/`)
+- Why last: integrated fixture, build, and Playwright coverage validates the composed dashboard after the UI slices above are defined.
 
 ## Notes For Future Planning
 

@@ -15,6 +15,8 @@ import {
   type DashboardSummary,
   type DashboardSymbol,
   type DashboardTrustState,
+  type DashboardWarning,
+  type DashboardWarningTone,
   type DashboardViewModel,
 } from '../dashboard-shell/model/dashboardShellModel'
 import {
@@ -63,6 +65,12 @@ export function deriveDashboardViewModel({ state, focusedSymbol, nowMs }: Dashbo
   const dataTimestamps = collectTimestamps(state)
   const hasRenderableShell = DASHBOARD_SYMBOLS.some((symbol) => Boolean(state.symbols[symbol].data))
   const overallTrust = deriveOverallTrust({ globalTrust, summaries, sections, hasRenderableShell })
+  const primaryWarning = buildPrimaryWarning({
+    globalTrust: globalTrust.trustState,
+    summaries,
+    focusedPanels,
+    focusedSymbol,
+  })
   const lastSuccessAt = newestTimestamp([
     state.global.lastSuccessAt,
     ...DASHBOARD_SYMBOLS.map((symbol) => state.symbols[symbol].lastSuccessAt),
@@ -84,6 +92,7 @@ export function deriveDashboardViewModel({ state, focusedSymbol, nowMs }: Dashbo
         state.symbols[focusedSymbol].data?.version.algorithmVersion ??
         'awaiting-current-state',
       trustState: overallTrust,
+      primaryWarning,
       degradedNotes: buildDashboardNotes(state, summaries, sections, focusedSymbol, globalTrust.trustState),
       isRefreshing: hasRenderableShell && hasPendingWork(state),
       lastSuccessLabel: lastSuccessAt ? `Last successful refresh ${formatAgeLabel(nowMs - lastSuccessAt)} ago` : undefined,
@@ -102,14 +111,23 @@ function buildSummary(
   nowMs: number,
 ): DashboardSummary {
   if (!record.data) {
+    const trustState = record.pending ? 'loading' : 'unavailable'
+
     return {
       symbol,
       stateLabel: record.pending ? 'Loading current state' : 'Unavailable',
-      trustState: record.pending ? 'loading' : 'unavailable',
+      trustState,
       reasons: record.error ? [record.error] : [],
       lastUpdated: '',
       freshnessLabel: record.pending ? 'Awaiting first service read' : 'No current-state payload',
       comparisonLabel: 'WORLD/USA comparison unavailable',
+      warning: record.pending
+        ? undefined
+        : createWarning(
+            'unavailable',
+            `${symbol} current state unavailable`,
+            record.error ?? 'No current-state payload is readable for this symbol yet.',
+          ),
     }
   }
 
@@ -132,6 +150,14 @@ function buildSummary(
     reasons.push('Latest refresh failed; showing last-known-good current state.')
   }
 
+  const warning = buildSummaryWarning({
+    symbol,
+    trust,
+    compositeAvailability: record.data.composite.availability,
+    hasRefreshError: Boolean(record.error),
+    timestampTrustReduced: hasTimestampTrustReduction(reasonCodes),
+  })
+
   return {
     symbol,
     stateLabel: record.data.regime.effectiveState,
@@ -143,6 +169,7 @@ function buildSummary(
     timestampNote: hasTimestampTrustReduction(reasonCodes)
       ? 'Timestamp trust is reduced in the service-owned payload.'
       : undefined,
+    warning,
   }
 }
 
@@ -448,7 +475,150 @@ function createPanelState(
     metrics,
     reasons,
     note,
+    warning: buildPanelWarning(SECTION_TITLES[key], trustState, note ?? summary, reasons),
   }
+}
+
+function buildPrimaryWarning(args: {
+  globalTrust: DashboardTrustState
+  summaries: Record<DashboardSymbol, DashboardSummary>
+  focusedPanels: Record<DashboardSectionKey, DashboardFocusedPanel>
+  focusedSymbol: DashboardSymbol
+}): DashboardWarning | undefined {
+  const peerSymbol = DASHBOARD_SYMBOLS.find((symbol) => symbol !== args.focusedSymbol)
+  const candidates: DashboardWarning[] = []
+
+  if (args.globalTrust === 'stale') {
+    candidates.push(
+      createWarning(
+        'stale',
+        'Global trust stale',
+        'Global ceiling freshness is stale; treat every focused read as last-known-good until refresh recovers.',
+      ),
+    )
+  }
+
+  if (args.globalTrust === 'unavailable') {
+    candidates.push(
+      createWarning(
+        'unavailable',
+        'Global trust unavailable',
+        'Global current-state context is unavailable; symbol reads stay visible but should not be treated as complete.',
+      ),
+    )
+  }
+
+  pushWarning(candidates, args.summaries[args.focusedSymbol].warning)
+  pushWarning(candidates, args.focusedPanels.overview.warning)
+  pushWarning(candidates, args.focusedPanels.microstructure.warning)
+  pushWarning(candidates, args.focusedPanels.health.warning)
+  if (args.focusedPanels.derivatives.warning) {
+    pushWarning(candidates, {
+      ...args.focusedPanels.derivatives.warning,
+      tone: args.focusedPanels.derivatives.warning.tone === 'unavailable' ? 'degraded' : args.focusedPanels.derivatives.warning.tone,
+    })
+  }
+
+  if (peerSymbol) {
+    pushWarning(candidates, args.summaries[peerSymbol].warning)
+  }
+
+  return pickMostSevereWarning(candidates)
+}
+
+function buildSummaryWarning(args: {
+  symbol: DashboardSymbol
+  trust: DashboardTrustState
+  compositeAvailability: DashboardAvailability
+  hasRefreshError: boolean
+  timestampTrustReduced: boolean
+}): DashboardWarning | undefined {
+  if (args.trust === 'loading' || args.trust === 'ready') {
+    return undefined
+  }
+
+  if (args.trust === 'unavailable') {
+    return createWarning(
+      'unavailable',
+      `${args.symbol} current state unavailable`,
+      args.hasRefreshError
+        ? 'The latest refresh did not recover and the symbol is no longer safe to treat as current.'
+        : 'The service-owned symbol surface is unavailable, so this summary is informational only.',
+    )
+  }
+
+  if (args.trust === 'stale') {
+    return createWarning(
+      'stale',
+      `${args.symbol} current state stale`,
+      args.hasRefreshError
+        ? 'Showing the last-known-good symbol state after refresh failure; do not assume live confirmation.'
+        : 'This symbol is older than the freshness window and should be read as last-known-good context.',
+    )
+  }
+
+  if (args.compositeAvailability === 'partial') {
+    return createWarning(
+      'degraded',
+      `${args.symbol} partial inputs`,
+      'WORLD/USA comparison is running on partial service inputs, so keep this symbol informational until coverage recovers.',
+    )
+  }
+
+  return createWarning(
+    'degraded',
+    `${args.symbol} trust reduced`,
+    args.timestampTrustReduced
+      ? 'Timestamp trust is reduced in the service-owned payload, so the latest symbol read needs caution.'
+      : 'One or more service-owned inputs are degraded, so this symbol should stay informational.',
+  )
+}
+
+function buildPanelWarning(
+  title: string,
+  trustState: DashboardTrustState,
+  detail: string,
+  reasons: string[],
+): DashboardWarning | undefined {
+  if (trustState === 'loading' || trustState === 'ready') {
+    return undefined
+  }
+
+  const fallbackDetail = reasons[0] ?? detail
+
+  if (trustState === 'unavailable') {
+    return createWarning('unavailable', `${title} unavailable`, fallbackDetail)
+  }
+
+  if (trustState === 'stale') {
+    return createWarning('stale', `${title} stale`, fallbackDetail)
+  }
+
+  return createWarning('degraded', `${title} degraded`, fallbackDetail)
+}
+
+function createWarning(tone: DashboardWarningTone, label: string, detail: string): DashboardWarning {
+  return {
+    tone,
+    label,
+    detail,
+  }
+}
+
+function pushWarning(target: DashboardWarning[], warning: DashboardWarning | undefined) {
+  if (warning) {
+    target.push(warning)
+  }
+}
+
+function pickMostSevereWarning(candidates: DashboardWarning[]): DashboardWarning | undefined {
+  return candidates.reduce<DashboardWarning | undefined>((current, candidate) => {
+    if (!current) {
+      return candidate
+    }
+
+    return TRUST_RANK[candidate.tone] > TRUST_RANK[current.tone] ? candidate : current
+  }, undefined)
 }
 
 function selectMicrostructureBucket(symbol: DashboardSymbolStateContract): DashboardBucketSectionContract {

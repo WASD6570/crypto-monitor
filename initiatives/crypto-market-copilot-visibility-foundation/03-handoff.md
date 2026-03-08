@@ -16,15 +16,18 @@
 12. `plans/completed/market-state-current-query-contracts/`
 13. `plans/completed/dashboard-query-adapters-and-trust-state/`
 14. `plans/completed/market-state-history-and-audit-reads/`
+15. `plans/completed/dashboard-detail-panels-and-symbol-switching/`
+16. `plans/completed/dashboard-negative-state-mobile-a11y/`
+17. `plans/completed/dashboard-fixture-smoke-matrix/`
 
 ## Epic Queue
 
 These remaining slices currently live as epics under `plans/epics/` and need refinement before implementation.
 
 - `world-usa-composites-and-market-state` now has all child features implemented, including `market-state-history-and-audit-reads`.
+- `visibility-dashboard-core` now has all child features implemented, including `dashboard-fixture-smoke-matrix`.
 
-1. `visibility-dashboard-core` (refined; completed children: `dashboard-shell-and-summary-strip`, `dashboard-query-adapters-and-trust-state`, `dashboard-detail-panels-and-symbol-switching`; next child feature: `dashboard-negative-state-mobile-a11y`)
-2. `slow-context-panel`
+1. `slow-context-panel`
 
 ## Planning Waves
 

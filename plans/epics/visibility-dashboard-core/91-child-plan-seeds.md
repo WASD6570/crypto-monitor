@@ -27,18 +27,20 @@
 - Why it stands alone: it implements the main operator read path after shell and data boundaries are already fixed.
 - Archive: `plans/completed/dashboard-detail-panels-and-symbol-switching/`
 
-## `dashboard-negative-state-mobile-a11y`
+## `dashboard-negative-state-mobile-a11y` (completed)
 
 - Outcome: the dashboard exposes stale, degraded, unavailable, and partial-data states consistently across desktop and mobile, with keyboard-safe symbol switching, visible warnings, and screen-reader-readable trust labels.
 - Primary repo areas: `apps/web/src/components`, `apps/web/src/features`, `apps/web/src/pages`, `tests/e2e`
 - Depends on: `plans/completed/dashboard-shell-and-summary-strip/`, `plans/completed/dashboard-query-adapters-and-trust-state/`, `plans/completed/dashboard-detail-panels-and-symbol-switching/`
 - Validation shape: `pnpm --dir apps/web test -- --runInBand` for accessibility-focused component behavior plus `pnpm --dir apps/web exec playwright test tests/e2e/visibility-dashboard-core.spec.ts --project=mobile-chrome`
 - Why it stands alone: negative-state honesty and mobile-safe density are a separate risk surface from basic panel rendering.
+- Archive: `plans/completed/dashboard-negative-state-mobile-a11y/`
 
-## `dashboard-fixture-smoke-matrix`
+## `dashboard-fixture-smoke-matrix` (completed)
 
 - Outcome: deterministic healthy, degraded, stale, and partial-data fixtures or mocks back the dashboard unit and Playwright smoke matrix, including timestamp-fallback trust notes and per-panel availability cases.
 - Primary repo areas: `tests/fixtures`, `apps/web/src/api`, `apps/web/src/features`, `tests/e2e`
-- Depends on: `plans/completed/dashboard-query-adapters-and-trust-state/`, `plans/completed/dashboard-detail-panels-and-symbol-switching/`, `dashboard-negative-state-mobile-a11y`, shared fixture conventions from `plans/completed/canonical-contracts-and-fixtures/`
+- Depends on: `plans/completed/dashboard-query-adapters-and-trust-state/`, `plans/completed/dashboard-detail-panels-and-symbol-switching/`, `plans/completed/dashboard-negative-state-mobile-a11y/`, shared fixture conventions from `plans/completed/canonical-contracts-and-fixtures/`
 - Validation shape: `pnpm --dir apps/web test -- --runInBand`, `pnpm --dir apps/web build`, `pnpm --dir apps/web exec playwright test tests/e2e/visibility-dashboard-core.spec.ts --project=chromium`, and `pnpm --dir apps/web exec playwright test tests/e2e/visibility-dashboard-core.spec.ts --project=mobile-chrome`
 - Why it stands alone: it closes the epic with implementation-proof coverage instead of scattering cross-panel verification through earlier plans.
+- Archive: `plans/completed/dashboard-fixture-smoke-matrix/`

@@ -12,6 +12,7 @@ compatibility: opencode
 - Write active implementation-ready plan artifacts to `plans/{feature_name}/` with overview + implementation steps + testing plan
 - Treat `plans/epics/{epic_name}/` as broad source context that should already be refined before this skill starts
 - Treat `plans/completed/{feature_name}/` as read-only archive for already-finished features
+- Plan with the expectation that once implementation and validation finish, the active plan is moved from `plans/{feature_name}/` to `plans/completed/{feature_name}/`
 
 ## When to use me
 
@@ -66,6 +67,10 @@ Plans should preserve the live/research boundary and avoid overdesign.
     - required env vars and credentials
     - expected side effects, artifacts, or state transitions to verify
     - replay, determinism, and parity checks when relevant
+9. **Record archive intent explicitly**:
+    - active plans live under `plans/{feature_name}/` only while work is still being implemented or validated
+    - once implementation and validation are done, move the full plan directory and `testing-report.md` to `plans/completed/{feature_name}/`
+    - downstream handoff docs should reference the completed archive path, not the former active path
 
 ## Context Discipline
 
@@ -106,7 +111,7 @@ Plans should preserve the live/research boundary and avoid overdesign.
 - Specify concrete endpoint, CLI, replay, or job sequence and required inputs.
 - Specify verification checklist for side effects, artifacts, persisted state, and logs as needed.
 - Add replay determinism and Go/Python parity checks when the feature depends on shared algorithms or fixtures.
-- Include expected output artifact path: `plans/{feature_name}/testing-report.md` while the feature is active; epics stay in `plans/epics/{epic_name}/` until refined, and completed features are archived later under `plans/completed/{feature_name}/`.
+- Include expected output artifact path: `plans/{feature_name}/testing-report.md` while the feature is active; once the feature is implemented and validated, move the entire directory to `plans/completed/{feature_name}/` so the report archives with the rest of the plan.
 
 ## Output location
 
@@ -117,6 +122,12 @@ Write implementation-ready plan files to:
 ```
 
 Use the ordering above and number sequentially for each module.
+
+Remember: this is the active implementation path only. Finished feature plans belong under:
+
+```
+{repo_root}/plans/completed/{feature_name}/
+```
 
 If the work is still too broad for direct implementation, keep or move that broad context under:
 

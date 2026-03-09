@@ -30,7 +30,7 @@ describe('dashboard decoders', () => {
 
   test('rejects malformed slow-context freshness values', () => {
     const malformed = structuredClone(healthyDashboardResponses.symbols['BTC-USD'])
-    malformed.slowContext.contexts[0].freshness = 'later'
+    ;(malformed.slowContext.contexts[0] as { freshness: string }).freshness = 'later'
 
     expect(() => decodeDashboardSymbolState(malformed)).toThrow(/slowContext\.contexts\[0\]\.freshness/i)
   })

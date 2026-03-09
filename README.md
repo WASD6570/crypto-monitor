@@ -83,3 +83,11 @@ The shared contract area is intentionally explicit:
 - Service and app internals are intentionally minimal.
 - Program docs live under `docs/specs/`; initiative plans live under `initiatives/`; feature plans live under `plans/`.
 - Later implementation work can fill in concrete code without redesigning the top-level layout.
+
+## Local Docker Startup
+
+- Run `docker compose up --build` from the repo root.
+- Open `http://127.0.0.1:4173/dashboard`.
+- The current Compose stack runs `web` plus a Go-owned `market-state-api` service.
+- Dashboard `/api/market-state/*` responses now come from Go, not frontend runtime mocks.
+- The API still uses deterministic local state for now; this is not live exchange connectivity yet.

@@ -127,7 +127,7 @@ func assertFreshness(t *testing.T, response AssetContextResponse, metricFamily M
 	if context.Availability != AvailabilityAvailable {
 		t.Fatalf("availability = %q, want %q", context.Availability, AvailabilityAvailable)
 	}
-	if context.ThresholdBasis.ExpectedCadence == "" {
+	if context.ThresholdBasis == nil || context.ThresholdBasis.ExpectedCadence == "" {
 		t.Fatalf("threshold basis missing expected cadence: %+v", context.ThresholdBasis)
 	}
 }

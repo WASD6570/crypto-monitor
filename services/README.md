@@ -6,6 +6,7 @@ Each service folder is intentionally shallow at the start so later implementers 
 
 Current service boundaries:
 
+- `market-state-api`
 - `venue-binance`
 - `venue-coinbase`
 - `venue-bybit`

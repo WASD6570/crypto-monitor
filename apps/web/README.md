@@ -21,3 +21,10 @@ Current implemented slice:
 - unit tests and Playwright smoke spec for the dashboard shell
 
 Live query adapters, detailed market panels, and replay-aware UI work remain planned follow-on slices.
+
+## Docker Compose
+
+- From the repo root, run `docker compose up --build`.
+- Visit `http://127.0.0.1:4173/dashboard`.
+- The web container serves the built SPA behind Nginx and proxies `/api` to the Go `market-state-api` service.
+- For local frontend development outside Compose, run the Go API separately and let Vite proxy `/api` via `VITE_API_PROXY_TARGET` (defaults to `http://127.0.0.1:8080`).

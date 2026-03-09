@@ -46,12 +46,12 @@ type ThresholdBasis struct {
 }
 
 type ContextResponse struct {
-	SourceFamily    SourceFamily      `json:"sourceFamily"`
+	SourceFamily    SourceFamily      `json:"sourceFamily,omitempty"`
 	MetricFamily    MetricFamily      `json:"metricFamily"`
 	Asset           string            `json:"asset"`
 	Availability    AvailabilityState `json:"availability"`
 	Freshness       FreshnessState    `json:"freshness"`
-	ExpectedCadence string            `json:"expectedCadence"`
+	ExpectedCadence string            `json:"expectedCadence,omitempty"`
 	AsOfTs          time.Time         `json:"asOfTs,omitempty"`
 	PublishedTs     time.Time         `json:"publishedTs,omitempty"`
 	IngestTs        time.Time         `json:"ingestTs,omitempty"`
@@ -59,7 +59,7 @@ type ContextResponse struct {
 	Revision        string            `json:"revision,omitempty"`
 	Value           *CandidateValue   `json:"value,omitempty"`
 	PreviousValue   *CandidateValue   `json:"previousValue,omitempty"`
-	ThresholdBasis  ThresholdBasis    `json:"thresholdBasis,omitempty"`
+	ThresholdBasis  *ThresholdBasis   `json:"thresholdBasis,omitempty"`
 	MessageKey      string            `json:"messageKey"`
 	Message         string            `json:"message"`
 	Error           string            `json:"error,omitempty"`
@@ -279,7 +279,7 @@ func buildContextResponse(latest AcceptedRecord, previous *AcceptedRecord, now t
 		Age:             now.UTC().Sub(latest.AsOfTs),
 		Revision:        latest.Revision,
 		Value:           candidateValuePointer(latest.Value),
-		ThresholdBasis:  basis,
+		ThresholdBasis:  &basis,
 		MessageKey:      messageKey,
 		Message:         message,
 	}

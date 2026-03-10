@@ -1,0 +1,46 @@
+{
+  "fixtureVersion": "v1",
+  "id": "binance-eth-usdt-edge-native-timestamp-degraded-top-book",
+  "family": "events",
+  "category": "edge-timestamp-degraded",
+  "scenarioClass": "edge-case",
+  "venue": "BINANCE",
+  "symbol": "ETH-USD",
+  "sourceSymbol": "ETHUSDT",
+  "quoteCurrency": "USDT",
+  "targetSchema": "order-book-top.v1.schema.json",
+  "purpose": "Validate native Binance Spot bookTicker timestamp degradation through the supervisor-to-normalizer handoff.",
+  "checks": [
+    "schema-validation",
+    "timestamp-degradation",
+    "integration-smoke"
+  ],
+  "rawMessages": [
+    {
+      "u": 9010,
+      "E": 1,
+      "s": "ETHUSDT",
+      "b": "3501.10",
+      "B": "2.40",
+      "a": "3501.30",
+      "A": "1.70",
+      "recvTs": "2026-03-06T12:02:20.03Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "order-book-top",
+      "bookAction": "top-of-book",
+      "symbol": "ETH-USD",
+      "sourceSymbol": "ETHUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BINANCE",
+      "marketType": "spot",
+      "exchangeTs": "1970-01-01T00:00:00.001Z",
+      "recvTs": "2026-03-06T12:02:20.03Z",
+      "timestampStatus": "degraded",
+      "sourceRecordId": "ticker:1970-01-01T00:00:00.001Z"
+    }
+  ]
+}

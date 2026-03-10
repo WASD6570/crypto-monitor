@@ -44,6 +44,19 @@ func TestParseOrderBookSnapshotProducesSharedBookMessage(t *testing.T) {
 	}
 }
 
+func TestParseOrderBookSnapshotUsesProvidedSourceSymbolWhenRESTPayloadOmitsIt(t *testing.T) {
+	recvTime := time.UnixMilli(1772798460030).UTC()
+	raw := []byte(`{"lastUpdateId":900,"bids":[["64010.00","1.25"]],"asks":[["64010.50","0.90"]]}`)
+
+	parsed, err := ParseOrderBookSnapshotWithSourceSymbol(raw, "BTCUSDT", recvTime)
+	if err != nil {
+		t.Fatalf("parse order-book snapshot with source symbol: %v", err)
+	}
+	if parsed.SourceSymbol != "BTCUSDT" {
+		t.Fatalf("source symbol = %q, want %q", parsed.SourceSymbol, "BTCUSDT")
+	}
+}
+
 func TestParseOrderBookEventsFeedCanonicalNormalizationHappyPath(t *testing.T) {
 	snapshotRecvTime := time.UnixMilli(1772798520040).UTC()
 	deltaRecvTime := time.UnixMilli(1772798520130).UTC()

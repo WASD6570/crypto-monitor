@@ -10,7 +10,10 @@ import (
 )
 
 func main() {
-	provider := marketstateapi.NewDeterministicProvider()
+	provider, err := newProvider()
+	if err != nil {
+		log.Fatalf("create market-state-api provider: %v", err)
+	}
 	server, err := marketstateapi.NewServer(serverAddress(), provider)
 	if err != nil {
 		log.Fatalf("create market-state-api server: %v", err)

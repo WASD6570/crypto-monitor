@@ -3,13 +3,13 @@
 ## Entry Conditions
 
 - Start this runbook whenever a venue feed leaves `HEALTHY` and enters `DEGRADED` or `STALE`.
-- Keep the emitted state and reasons intact; do not translate `connection-not-ready`, `message-stale`, `snapshot-stale`, `sequence-gap`, `reconnect-loop`, `resync-loop`, or `clock-degraded` into alternate labels.
+- Keep the emitted state and reasons intact; do not translate `connection-not-ready`, `message-stale`, `snapshot-stale`, `sequence-gap`, `reconnect-loop`, `resync-loop`, `rate-limit`, or `clock-degraded` into alternate labels.
 
 ## Quick Triage
 
 1. Record the current feed state: `HEALTHY`, `DEGRADED`, or `STALE`.
 2. Record the emitted degradation reasons exactly as shown.
-3. Check `message_lag_ms`, `snapshot_lag_ms`, `reconnect_count`, `resync_count`, `sequence_gap_count`, `snapshot_recovery_attempts_per_minute`, and `clock_offset_ms`.
+3. Check `message_lag_ms`, `snapshot_lag_ms`, `reconnect_count`, `resync_count`, `sequence_gap_count`, `snapshot_recovery_attempts_per_minute`, `rest_poll_attempts_per_minute`, and `clock_offset_ms`.
 4. Confirm whether the current condition is bounded by retry policy or requires operator intervention.
 
 ## Reason-Specific Actions
@@ -22,6 +22,7 @@
 | `sequence-gap` | order-book continuity is uncertain | force resync immediately; never infer missing Kraken or Bybit L2 continuity |
 | `reconnect-loop` | reconnect attempts crossed the configured threshold | verify upstream availability, host networking, and backoff clamp behavior |
 | `resync-loop` | resync attempts crossed the configured threshold | inspect parser integrity, snapshot inputs, and gap frequency |
+| `rate-limit` | REST polling exceeded the configured minute budget | confirm the configured cadence, wait for the retry window, and avoid manual burst polling |
 | `clock-degraded` | clock skew crossed the degraded threshold | check host NTP/clock source and validate timestamp trust before downstream use |
 
 ## Exit Criteria

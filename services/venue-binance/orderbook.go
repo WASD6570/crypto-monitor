@@ -9,8 +9,10 @@ import (
 )
 
 type ParsedOrderBook struct {
-	SourceSymbol string
-	Message      ingestion.OrderBookMessage
+	SourceSymbol  string
+	FirstSequence int64
+	FinalSequence int64
+	Message       ingestion.OrderBookMessage
 }
 
 type bookLevel [2]string
@@ -33,6 +35,14 @@ type orderBookDeltaPayload struct {
 }
 
 func ParseOrderBookSnapshot(raw []byte, recvTime time.Time) (ParsedOrderBook, error) {
+	return parseOrderBookSnapshot(raw, "", recvTime)
+}
+
+func ParseOrderBookSnapshotWithSourceSymbol(raw []byte, sourceSymbol string, recvTime time.Time) (ParsedOrderBook, error) {
+	return parseOrderBookSnapshot(raw, sourceSymbol, recvTime)
+}
+
+func parseOrderBookSnapshot(raw []byte, sourceSymbol string, recvTime time.Time) (ParsedOrderBook, error) {
 	if recvTime.IsZero() {
 		return ParsedOrderBook{}, fmt.Errorf("recv time is required")
 	}
@@ -41,7 +51,14 @@ func ParseOrderBookSnapshot(raw []byte, recvTime time.Time) (ParsedOrderBook, er
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return ParsedOrderBook{}, fmt.Errorf("decode binance order-book snapshot: %w", err)
 	}
-	if payload.SourceSymbol == "" {
+	resolvedSourceSymbol := payload.SourceSymbol
+	if resolvedSourceSymbol == "" {
+		resolvedSourceSymbol = sourceSymbol
+	}
+	if payload.SourceSymbol != "" && sourceSymbol != "" && payload.SourceSymbol != sourceSymbol {
+		return ParsedOrderBook{}, fmt.Errorf("snapshot source symbol = %q, want %q", payload.SourceSymbol, sourceSymbol)
+	}
+	if resolvedSourceSymbol == "" {
 		return ParsedOrderBook{}, fmt.Errorf("source symbol is required")
 	}
 	if payload.LastUpdateID <= 0 {
@@ -58,13 +75,16 @@ func ParseOrderBookSnapshot(raw []byte, recvTime time.Time) (ParsedOrderBook, er
 	}
 
 	return ParsedOrderBook{
-		SourceSymbol: payload.SourceSymbol,
+		SourceSymbol:  resolvedSourceSymbol,
+		FirstSequence: payload.LastUpdateID,
+		FinalSequence: payload.LastUpdateID,
 		Message: ingestion.OrderBookMessage{
-			Type:         "snapshot",
-			Sequence:     payload.LastUpdateID,
-			BestBidPrice: bestBidPrice,
-			BestAskPrice: bestAskPrice,
-			RecvTs:       recvTime.UTC().Format(time.RFC3339Nano),
+			Type:          "snapshot",
+			FirstSequence: payload.LastUpdateID,
+			Sequence:      payload.LastUpdateID,
+			BestBidPrice:  bestBidPrice,
+			BestAskPrice:  bestAskPrice,
+			RecvTs:        recvTime.UTC().Format(time.RFC3339Nano),
 		},
 	}, nil
 }
@@ -105,14 +125,17 @@ func ParseOrderBookDelta(raw []byte, recvTime time.Time) (ParsedOrderBook, error
 	}
 
 	return ParsedOrderBook{
-		SourceSymbol: payload.SourceSymbol,
+		SourceSymbol:  payload.SourceSymbol,
+		FirstSequence: payload.FirstUpdateID,
+		FinalSequence: payload.FinalUpdateID,
 		Message: ingestion.OrderBookMessage{
-			Type:         "delta",
-			Sequence:     payload.FinalUpdateID,
-			BestBidPrice: bestBidPrice,
-			BestAskPrice: bestAskPrice,
-			ExchangeTs:   exchangeTimestamp,
-			RecvTs:       recvTime.UTC().Format(time.RFC3339Nano),
+			Type:          "delta",
+			FirstSequence: payload.FirstUpdateID,
+			Sequence:      payload.FinalUpdateID,
+			BestBidPrice:  bestBidPrice,
+			BestAskPrice:  bestAskPrice,
+			ExchangeTs:    exchangeTimestamp,
+			RecvTs:        recvTime.UTC().Format(time.RFC3339Nano),
 		},
 	}, nil
 }
@@ -132,4 +155,8 @@ func formatUnixMilliTimestamp(value int64) (string, error) {
 		return "", fmt.Errorf("event time must be present")
 	}
 	return time.UnixMilli(value).UTC().Format(time.RFC3339Nano), nil
+}
+
+func ParseOrderBookFrame(frame SpotRawFrame) (ParsedOrderBook, error) {
+	return ParseOrderBookDelta(frame.Payload, frame.RecvTime)
 }

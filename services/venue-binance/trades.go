@@ -63,6 +63,10 @@ func ParseTradeEvent(raw []byte, recvTime time.Time) (ParsedTrade, error) {
 	}, nil
 }
 
+func ParseTradeFrame(frame SpotRawFrame) (ParsedTrade, error) {
+	return ParseTradeEvent(frame.Payload, frame.RecvTime)
+}
+
 func deriveAggressorSide(buyerMaker bool) string {
 	if buyerMaker {
 		return "sell"
@@ -78,5 +82,5 @@ func formatExchangeTimestamp(tradeTimeMs, eventTimeMs int64) (string, error) {
 	if selected <= 0 {
 		return "", fmt.Errorf("trade time or event time must be present")
 	}
-	return time.UnixMilli(selected).UTC().Format(time.RFC3339Nano), nil
+	return time.UnixMilli(selected).UTC().Format("2006-01-02T15:04:05.000Z07:00"), nil
 }

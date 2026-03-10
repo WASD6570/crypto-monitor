@@ -120,7 +120,7 @@ func replayRetentionRequest(mode contracts.ReplayRuntimeMode) contracts.ReplayRu
 func replayRetentionManifestRecord(state ingestion.RawStorageState, location string) ingestion.RawPartitionManifestRecord {
 	return ingestion.RawPartitionManifestRecord{
 		SchemaVersion:         "v1",
-		LogicalPartition:      ingestion.RawPartitionKey{UTCDate: "2026-03-06", Symbol: "BTC-USD", Venue: ingestion.VenueCoinbase, StreamFamily: "trades"},
+		LogicalPartition:      ingestion.RawPartitionKey{UTCDate: "2026-03-06", Symbol: "BTC-USD", Venue: ingestion.VenueCoinbase},
 		StorageState:          state,
 		Location:              location,
 		HotRetentionUntil:     "2026-04-05T00:00:00Z",
@@ -166,7 +166,7 @@ func replayRetentionEntry(bucketTimestamp string, sequence int64, sourceID strin
 		SessionRef:             "session-1",
 		BuildVersion:           "test",
 		DuplicateAudit:         ingestion.RawDuplicateAudit{IdentityKey: sourceID, Occurrence: 1},
-		PartitionKey:           ingestion.RawPartitionKey{UTCDate: "2026-03-06", Symbol: "BTC-USD", Venue: ingestion.VenueCoinbase, StreamFamily: "trades"},
+		PartitionKey:           ingestion.RawPartitionKey{UTCDate: "2026-03-06", Symbol: "BTC-USD", Venue: ingestion.VenueCoinbase},
 	}
 }
 
@@ -194,7 +194,17 @@ type replayRetentionManifestReader struct {
 }
 
 func (r replayRetentionManifestReader) ResolveRawPartitions(scope ingestion.RawPartitionLookupScope) ([]ingestion.RawPartitionManifestRecord, error) {
-	return append([]ingestion.RawPartitionManifestRecord(nil), r.records...), nil
+	resolved := make([]ingestion.RawPartitionManifestRecord, 0, len(r.records))
+	for _, record := range r.records {
+		if record.LogicalPartition.Symbol != scope.Symbol || record.LogicalPartition.Venue != scope.Venue {
+			continue
+		}
+		if scope.StreamFamily != "" && record.LogicalPartition.StreamFamily != scope.StreamFamily {
+			continue
+		}
+		resolved = append(resolved, record)
+	}
+	return resolved, nil
 }
 
 type replayRetentionSnapshotLoader struct{}

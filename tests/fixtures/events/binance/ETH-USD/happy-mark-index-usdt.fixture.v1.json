@@ -16,10 +16,13 @@
   ],
   "rawMessages": [
     {
-      "type": "mark-index",
-      "markPrice": "3500.10",
-      "indexPrice": "3499.80",
-      "exchangeTs": "2026-03-06T12:00:05.000Z",
+      "e": "markPriceUpdate",
+      "E": 1772798405000,
+      "s": "ETHUSDT",
+      "p": "3500.10",
+      "i": "3499.80",
+      "r": "0.00010000",
+      "T": 1772812800000,
       "recvTs": "2026-03-06T12:00:05.040Z"
     }
   ],
@@ -32,10 +35,12 @@
       "quoteCurrency": "USDT",
       "venue": "BINANCE",
       "marketType": "perpetual",
-      "exchangeTs": "2026-03-06T12:00:05.000Z",
-      "recvTs": "2026-03-06T12:00:05.040Z",
+      "markPrice": "3500.10",
+      "indexPrice": "3499.80",
+      "exchangeTs": "2026-03-06T12:00:05Z",
+      "recvTs": "2026-03-06T12:00:05.04Z",
       "timestampStatus": "normal",
-      "sourceRecordId": "mark-index:2026-03-06T12:00:05.000Z"
+      "sourceRecordId": "mark-index:2026-03-06T12:00:05Z"
     }
   ]
 }

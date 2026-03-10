@@ -62,6 +62,11 @@ type ExecutionOutput struct {
 
 type realClock struct{}
 
+type replayLookupScope struct {
+	streamFamily string
+	sharedOnly   bool
+}
+
 func (realClock) Now() time.Time { return time.Now().UTC() }
 
 func NewManifestBuilder(reader ManifestReader, snapshotLoader ConfigSnapshotLoader, build contracts.ReplayBuildProvenance) (*ManifestBuilder, error) {
@@ -104,19 +109,16 @@ func (b *ManifestBuilder) Build(request contracts.ReplayRunRequest) (contracts.R
 	}
 
 	partitionRefs := make([]contracts.ReplayPartitionRef, 0)
+	resolvedPartitions := make(map[string]contracts.ReplayPartitionRef)
 	venues := append([]string(nil), request.Scope.Venues...)
 	sort.Strings(venues)
-	streamFamilies := append([]string(nil), request.Scope.StreamFamilies...)
-	if len(streamFamilies) == 0 {
-		streamFamilies = []string{""}
-	}
-	sort.Strings(streamFamilies)
+	lookupScopes := replayLookupScopes(request.Scope.StreamFamilies)
 	for _, venue := range venues {
-		for _, streamFamily := range streamFamilies {
+		for _, lookupScope := range lookupScopes {
 			records, err := b.reader.ResolveRawPartitions(ingestion.RawPartitionLookupScope{
 				Symbol:       request.Scope.Symbol,
-				Venue:        ingestion.Venue(venue),
-				StreamFamily: streamFamily,
+				Venue:        replayLookupVenue(venue),
+				StreamFamily: lookupScope.streamFamily,
 				Start:        start,
 				End:          end,
 			})
@@ -124,7 +126,10 @@ func (b *ManifestBuilder) Build(request contracts.ReplayRunRequest) (contracts.R
 				return contracts.ReplayRunManifest{}, err
 			}
 			for _, record := range records {
-				partitionRefs = append(partitionRefs, contracts.ReplayPartitionRef{
+				if lookupScope.sharedOnly && record.LogicalPartition.StreamFamily != "" {
+					continue
+				}
+				ref := contracts.ReplayPartitionRef{
 					SchemaVersion:         "v1",
 					LogicalPartition:      record.LogicalPartition.String(),
 					StorageState:          string(record.StorageState),
@@ -133,7 +138,15 @@ func (b *ManifestBuilder) Build(request contracts.ReplayRunRequest) (contracts.R
 					FirstCanonicalEventID: record.FirstCanonicalEventID,
 					LastCanonicalEventID:  record.LastCanonicalEventID,
 					ContinuityChecksum:    record.ContinuityChecksum,
-				})
+				}
+				if existing, ok := resolvedPartitions[ref.LogicalPartition]; ok {
+					if existing != ref {
+						return contracts.ReplayRunManifest{}, fmt.Errorf("resolved raw partition drift for %q", ref.LogicalPartition)
+					}
+					continue
+				}
+				resolvedPartitions[ref.LogicalPartition] = ref
+				partitionRefs = append(partitionRefs, ref)
 			}
 		}
 	}
@@ -370,16 +383,13 @@ func validateResolvedPartitions(reader ManifestReader, manifest contracts.Replay
 	for _, ref := range manifest.RawPartitions {
 		expected[ref.LogicalPartition] = ref
 	}
-	streamFamilies := append([]string(nil), manifest.Scope.StreamFamilies...)
-	if len(streamFamilies) == 0 {
-		streamFamilies = []string{""}
-	}
+	lookupScopes := replayLookupScopes(manifest.Scope.StreamFamilies)
 	for _, venue := range manifest.Scope.Venues {
-		for _, streamFamily := range streamFamilies {
+		for _, lookupScope := range lookupScopes {
 			records, err := reader.ResolveRawPartitions(ingestion.RawPartitionLookupScope{
 				Symbol:       manifest.Scope.Symbol,
-				Venue:        ingestion.Venue(venue),
-				StreamFamily: streamFamily,
+				Venue:        replayLookupVenue(venue),
+				StreamFamily: lookupScope.streamFamily,
 				Start:        start,
 				End:          end,
 			})
@@ -387,6 +397,9 @@ func validateResolvedPartitions(reader ManifestReader, manifest contracts.Replay
 				return err
 			}
 			for _, record := range records {
+				if lookupScope.sharedOnly && record.LogicalPartition.StreamFamily != "" {
+					continue
+				}
 				ref, ok := expected[record.LogicalPartition.String()]
 				if !ok {
 					return fmt.Errorf("resolved unexpected raw partition %q", record.LogicalPartition.String())
@@ -447,13 +460,76 @@ func replayCounters(entries []ingestion.RawAppendEntry, partitions []contracts.R
 }
 
 func digestEntries(entries []ingestion.RawAppendEntry) (string, error) {
-	ids := make([]string, 0, len(entries))
+	type replayDigestEntry struct {
+		CanonicalEventID           string                             `json:"canonicalEventId"`
+		VenueMessageID             string                             `json:"venueMessageId"`
+		VenueSequence              int64                              `json:"venueSequence"`
+		StreamKey                  string                             `json:"streamKey"`
+		StreamFamily               string                             `json:"streamFamily"`
+		BucketTimestamp            string                             `json:"bucketTimestamp"`
+		BucketTimestampSource      ingestion.RawBucketTimestampSource `json:"bucketTimestampSource"`
+		TimestampDegradationReason ingestion.TimestampFallbackReason  `json:"timestampDegradationReason,omitempty"`
+		Late                       bool                               `json:"late"`
+		DegradedFeedRef            string                             `json:"degradedFeedRef,omitempty"`
+		DuplicateIdentityKey       string                             `json:"duplicateIdentityKey,omitempty"`
+		DuplicateOccurrence        int                                `json:"duplicateOccurrence,omitempty"`
+		Duplicate                  bool                               `json:"duplicate"`
+	}
+	digestEntries := make([]replayDigestEntry, 0, len(entries))
 	for _, entry := range entries {
-		ids = append(ids, entry.CanonicalEventID+"|"+entry.VenueMessageID)
+		digestEntries = append(digestEntries, replayDigestEntry{
+			CanonicalEventID:           entry.CanonicalEventID,
+			VenueMessageID:             entry.VenueMessageID,
+			VenueSequence:              entry.VenueSequence,
+			StreamKey:                  entry.StreamKey,
+			StreamFamily:               entry.StreamFamily,
+			BucketTimestamp:            entry.BucketTimestamp,
+			BucketTimestampSource:      entry.BucketTimestampSource,
+			TimestampDegradationReason: entry.TimestampDegradationReason,
+			Late:                       entry.Late,
+			DegradedFeedRef:            entry.DegradedFeedRef,
+			DuplicateIdentityKey:       entry.DuplicateAudit.IdentityKey,
+			DuplicateOccurrence:        entry.DuplicateAudit.Occurrence,
+			Duplicate:                  entry.DuplicateAudit.Duplicate,
+		})
 	}
 	return contracts.ReplayValueDigest(struct {
-		IDs []string `json:"ids"`
-	}{IDs: ids})
+		Entries []replayDigestEntry `json:"entries"`
+	}{Entries: digestEntries})
+}
+
+func replayLookupScopes(streamFamilies []string) []replayLookupScope {
+	if len(streamFamilies) == 0 {
+		return []replayLookupScope{{streamFamily: ""}}
+	}
+	seen := make(map[replayLookupScope]struct{}, len(streamFamilies))
+	lookupScopes := make([]replayLookupScope, 0, len(streamFamilies))
+	for _, streamFamily := range streamFamilies {
+		lookupFamily := replayLookupFamily(streamFamily)
+		scope := replayLookupScope{streamFamily: lookupFamily, sharedOnly: lookupFamily == ""}
+		if _, ok := seen[scope]; ok {
+			continue
+		}
+		seen[scope] = struct{}{}
+		lookupScopes = append(lookupScopes, scope)
+	}
+	sort.Slice(lookupScopes, func(i, j int) bool {
+		return lookupScopes[i].streamFamily < lookupScopes[j].streamFamily
+	})
+	return lookupScopes
+}
+
+func replayLookupFamily(streamFamily string) string {
+	switch streamFamily {
+	case string(ingestion.StreamOrderBook), string(ingestion.StreamFundingRate), string(ingestion.StreamOpenInterest), string(ingestion.StreamMarkIndex), string(ingestion.StreamLiquidation), ingestion.RawStreamFamilyFeedHealth:
+		return streamFamily
+	default:
+		return ""
+	}
+}
+
+func replayLookupVenue(venue string) ingestion.Venue {
+	return ingestion.Venue(strings.ToUpper(strings.TrimSpace(venue)))
 }
 
 func replayArtifactPayload(entries []ingestion.RawAppendEntry) map[string]any {

@@ -1,0 +1,48 @@
+{
+  "fixtureVersion": "v1",
+  "id": "binance-btc-usdt-edge-depth-snapshot-stale",
+  "family": "events",
+  "category": "edge-stale-feed",
+  "scenarioClass": "edge-case",
+  "venue": "BINANCE",
+  "symbol": "BTC-USD",
+  "sourceSymbol": "BTCUSDT",
+  "quoteCurrency": "USDT",
+  "targetSchema": "feed-health.v1.schema.json",
+  "purpose": "Exercise snapshot-stale degradation while synchronized depth messages continue to arrive fresh.",
+  "checks": [
+    "schema-validation",
+    "snapshot-stale",
+    "fresh-message-boundary"
+  ],
+  "observeAt": "2026-03-06T12:02:31Z",
+  "rawMessages": [
+    {
+      "e": "depthUpdate",
+      "E": 1772798550900,
+      "s": "BTCUSDT",
+      "U": 702,
+      "u": 702,
+      "b": [["64020.30", "0.98"]],
+      "a": [["64020.60", "0.78"]],
+      "recvTs": "2026-03-06T12:02:30.90Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "feed-health",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTCUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BINANCE",
+      "marketType": "spot",
+      "exchangeTs": "2026-03-06T12:02:31Z",
+      "recvTs": "2026-03-06T12:02:31Z",
+      "timestampStatus": "normal",
+      "feedHealthState": "STALE",
+      "degradationReasons": ["snapshot-stale"],
+      "sourceRecordId": "runtime:binance-spot-depth:BTCUSDT"
+    }
+  ]
+}

@@ -25,8 +25,8 @@ func TestParseTradeEventProducesSharedTradeMessage(t *testing.T) {
 	if parsed.Message.Side != "buy" {
 		t.Fatalf("side = %q, want %q", parsed.Message.Side, "buy")
 	}
-	if parsed.Message.ExchangeTs != "2026-03-06T12:00:00.1Z" {
-		t.Fatalf("exchangeTs = %q, want %q", parsed.Message.ExchangeTs, "2026-03-06T12:00:00.1Z")
+	if parsed.Message.ExchangeTs != "2026-03-06T12:00:00.100Z" {
+		t.Fatalf("exchangeTs = %q, want %q", parsed.Message.ExchangeTs, "2026-03-06T12:00:00.100Z")
 	}
 	if parsed.Message.RecvTs != "2026-03-06T12:00:00.18Z" {
 		t.Fatalf("recvTs = %q, want %q", parsed.Message.RecvTs, "2026-03-06T12:00:00.18Z")
@@ -79,10 +79,52 @@ func TestParseTradeEventFallsBackToEventTimeWhenTradeTimeMissing(t *testing.T) {
 		t.Fatalf("parse trade event: %v", err)
 	}
 
-	if parsed.Message.ExchangeTs != "2026-03-06T12:00:00.18Z" {
-		t.Fatalf("exchangeTs = %q, want %q", parsed.Message.ExchangeTs, "2026-03-06T12:00:00.18Z")
+	if parsed.Message.ExchangeTs != "2026-03-06T12:00:00.180Z" {
+		t.Fatalf("exchangeTs = %q, want %q", parsed.Message.ExchangeTs, "2026-03-06T12:00:00.180Z")
 	}
 	if parsed.Message.Side != "sell" {
 		t.Fatalf("side = %q, want %q", parsed.Message.Side, "sell")
+	}
+}
+
+func TestParseTradeFrameConsumesSupervisorAcceptedFrame(t *testing.T) {
+	config := loadBinanceRuntimeConfig(t)
+	runtime, err := NewRuntime(config)
+	if err != nil {
+		t.Fatalf("new runtime: %v", err)
+	}
+	supervisor, err := NewSpotWebsocketSupervisor(runtime)
+	if err != nil {
+		t.Fatalf("new supervisor: %v", err)
+	}
+
+	base := time.UnixMilli(1772798525000).UTC()
+	if err := supervisor.StartConnect(base); err != nil {
+		t.Fatalf("start connect: %v", err)
+	}
+	command, err := supervisor.CompleteConnect(base.Add(100 * time.Millisecond))
+	if err != nil {
+		t.Fatalf("complete connect: %v", err)
+	}
+	if err := supervisor.AckSubscribe(base.Add(200*time.Millisecond), command.ID); err != nil {
+		t.Fatalf("ack subscribe: %v", err)
+	}
+	frame, err := supervisor.AcceptDataFrame([]byte(`{"e":"trade","E":1772798400180,"s":"BTCUSDT","t":1001,"p":"64000.10","q":"0.015","T":1772798400100,"m":false,"M":true}`), base.Add(300*time.Millisecond))
+	if err != nil {
+		t.Fatalf("accept trade frame: %v", err)
+	}
+
+	parsed, err := ParseTradeFrame(frame)
+	if err != nil {
+		t.Fatalf("parse trade frame: %v", err)
+	}
+	if parsed.SourceSymbol != "BTCUSDT" {
+		t.Fatalf("source symbol = %q, want %q", parsed.SourceSymbol, "BTCUSDT")
+	}
+	if parsed.Message.RecvTs != "2026-03-06T12:02:05.3Z" {
+		t.Fatalf("recvTs = %q, want %q", parsed.Message.RecvTs, "2026-03-06T12:02:05.3Z")
+	}
+	if parsed.Message.ExchangeTs != "2026-03-06T12:00:00.100Z" {
+		t.Fatalf("exchangeTs = %q, want %q", parsed.Message.ExchangeTs, "2026-03-06T12:00:00.100Z")
 	}
 }

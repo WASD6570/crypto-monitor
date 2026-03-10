@@ -39,6 +39,17 @@ func TestLoadEnvironmentConfigParsesLocalRuntimeConfig(t *testing.T) {
 	if !runtimeConfig.ResubscribeOnReconnect {
 		t.Fatal("expected resubscribe on reconnect to be true")
 	}
+
+	binanceRuntime, err := config.RuntimeConfigFor(VenueBinance)
+	if err != nil {
+		t.Fatalf("load binance runtime config: %v", err)
+	}
+	if binanceRuntime.OpenInterestPollInterval != 5*time.Second {
+		t.Fatalf("open interest poll interval = %s, want %s", binanceRuntime.OpenInterestPollInterval, 5*time.Second)
+	}
+	if binanceRuntime.OpenInterestPollsPerMinuteLimit != 30 {
+		t.Fatalf("open interest polls per-minute limit = %d, want %d", binanceRuntime.OpenInterestPollsPerMinuteLimit, 30)
+	}
 }
 
 func TestEnvironmentConfigValidateRejectsInvalidSnapshotPolicy(t *testing.T) {

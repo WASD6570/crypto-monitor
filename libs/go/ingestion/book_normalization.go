@@ -14,12 +14,13 @@ type BookMetadata struct {
 }
 
 type OrderBookMessage struct {
-	Type         string `json:"type"`
-	Sequence     int64  `json:"sequence"`
-	BestBidPrice string `json:"bestBidPrice"`
-	BestAskPrice string `json:"bestAskPrice"`
-	ExchangeTs   string `json:"exchangeTs"`
-	RecvTs       string `json:"recvTs"`
+	Type          string `json:"type"`
+	FirstSequence int64  `json:"firstSequence,omitempty"`
+	Sequence      int64  `json:"sequence"`
+	BestBidPrice  string `json:"bestBidPrice"`
+	BestAskPrice  string `json:"bestAskPrice"`
+	ExchangeTs    string `json:"exchangeTs"`
+	RecvTs        string `json:"recvTs"`
 }
 
 type CanonicalOrderBookEvent struct {
@@ -103,7 +104,7 @@ func NormalizeOrderBookMessage(metadata BookMetadata, message OrderBookMessage, 
 		}, nil
 	}
 
-	sequenceResult, err := sequencer.Apply(SequencedBookUpdate{Kind: kind, Sequence: message.Sequence})
+	sequenceResult, err := sequencer.Apply(SequencedBookUpdate{Kind: kind, FirstSequence: message.FirstSequence, Sequence: message.Sequence})
 	if err != nil {
 		return OrderBookNormalizationResult{}, err
 	}
@@ -177,6 +178,9 @@ func gapSourceRecordID(sequenceResult SequenceResult, sequence int64) string {
 }
 
 func topOfBookSourceRecordID(message OrderBookMessage) string {
+	if message.Sequence > 0 && message.ExchangeTs == "" {
+		return fmt.Sprintf("ticker:%d", message.Sequence)
+	}
 	timestamp := message.ExchangeTs
 	if timestamp == "" {
 		timestamp = message.RecvTs

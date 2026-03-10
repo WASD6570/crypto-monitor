@@ -1,0 +1,45 @@
+{
+  "fixtureVersion": "v1",
+  "id": "binance-btc-usdt-happy-native-top-book",
+  "family": "events",
+  "category": "happy-top-of-book",
+  "scenarioClass": "happy-path",
+  "venue": "BINANCE",
+  "symbol": "BTC-USD",
+  "sourceSymbol": "BTCUSDT",
+  "quoteCurrency": "USDT",
+  "targetSchema": "order-book-top.v1.schema.json",
+  "purpose": "Validate native Binance Spot bookTicker parsing through the supervisor-to-normalizer handoff.",
+  "checks": [
+    "schema-validation",
+    "normalization",
+    "integration-smoke"
+  ],
+  "rawMessages": [
+    {
+      "u": 9001,
+      "s": "BTCUSDT",
+      "b": "64000.10",
+      "B": "1.25",
+      "a": "64000.20",
+      "A": "0.98",
+      "recvTs": "2026-03-06T12:00:00.18Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "order-book-top",
+      "bookAction": "top-of-book",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTCUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BINANCE",
+      "marketType": "spot",
+      "exchangeTs": "",
+      "recvTs": "2026-03-06T12:00:00.18Z",
+      "timestampStatus": "degraded",
+      "sourceRecordId": "ticker:9001"
+    }
+  ]
+}

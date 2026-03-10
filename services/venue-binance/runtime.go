@@ -24,6 +24,12 @@ type SnapshotRecoveryRateLimitStatus struct {
 	RetryAfter         time.Duration
 }
 
+type SnapshotRefreshStatus struct {
+	Required  bool
+	Due       bool
+	Remaining time.Duration
+}
+
 type ReconnectLoopStatus struct {
 	LoopDetected          bool
 	ConsecutiveReconnects int
@@ -347,6 +353,36 @@ func (r *Runtime) SnapshotRecoveryRateLimitStatus(now time.Time, recentAttempts 
 	}
 	status.RemainingAllowance = 0
 	status.RetryAfter = oldestAttempt.Add(time.Minute).Sub(now)
+	return status, nil
+}
+
+func (r *Runtime) SnapshotRefreshStatus(now, lastSnapshotAt time.Time) (SnapshotRefreshStatus, error) {
+	if r == nil {
+		return SnapshotRefreshStatus{}, fmt.Errorf("runtime is required")
+	}
+	if now.IsZero() {
+		return SnapshotRefreshStatus{}, fmt.Errorf("current time is required")
+	}
+	if !r.config.SnapshotRefreshRequired {
+		return SnapshotRefreshStatus{}, nil
+	}
+	if r.config.SnapshotRefreshInterval <= 0 {
+		return SnapshotRefreshStatus{}, fmt.Errorf("snapshot refresh interval must be positive when refresh is required")
+	}
+	status := SnapshotRefreshStatus{Required: true}
+	if lastSnapshotAt.IsZero() {
+		status.Due = true
+		return status, nil
+	}
+	if lastSnapshotAt.After(now) {
+		return SnapshotRefreshStatus{}, fmt.Errorf("last snapshot time cannot be in the future")
+	}
+	remaining := r.config.SnapshotRefreshInterval - now.Sub(lastSnapshotAt)
+	if remaining <= 0 {
+		status.Due = true
+		return status, nil
+	}
+	status.Remaining = remaining
 	return status, nil
 }
 

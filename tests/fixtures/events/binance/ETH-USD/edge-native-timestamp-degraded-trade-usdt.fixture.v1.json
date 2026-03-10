@@ -1,0 +1,47 @@
+{
+  "fixtureVersion": "v1",
+  "id": "binance-eth-usdt-edge-native-timestamp-degraded-trade",
+  "family": "events",
+  "category": "edge-timestamp-degraded",
+  "scenarioClass": "edge-case",
+  "venue": "BINANCE",
+  "symbol": "ETH-USD",
+  "sourceSymbol": "ETHUSDT",
+  "quoteCurrency": "USDT",
+  "targetSchema": "market-trade.v1.schema.json",
+  "purpose": "Validate native Binance Spot trade timestamp degradation through the supervisor-to-normalizer handoff.",
+  "checks": [
+    "schema-validation",
+    "timestamp-degradation",
+    "integration-smoke"
+  ],
+  "rawMessages": [
+    {
+      "e": "trade",
+      "E": 1772798540030,
+      "s": "ETHUSDT",
+      "t": 2010,
+      "p": "3501.20",
+      "q": "0.80",
+      "T": 1,
+      "m": true,
+      "M": true,
+      "recvTs": "2026-03-06T12:02:20.03Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "market-trade",
+      "symbol": "ETH-USD",
+      "sourceSymbol": "ETHUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BINANCE",
+      "marketType": "spot",
+      "exchangeTs": "1970-01-01T00:00:00.001Z",
+      "recvTs": "2026-03-06T12:02:20.03Z",
+      "timestampStatus": "degraded",
+      "sourceRecordId": "trade:2010"
+    }
+  ]
+}

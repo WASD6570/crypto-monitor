@@ -1,0 +1,41 @@
+{
+  "fixtureVersion": "v1",
+  "id": "binance-eth-usdt-happy-open-interest",
+  "family": "events",
+  "category": "happy-open-interest",
+  "scenarioClass": "happy-path",
+  "venue": "BINANCE",
+  "symbol": "ETH-USD",
+  "sourceSymbol": "ETHUSDT",
+  "quoteCurrency": "USDT",
+  "targetSchema": "open-interest-snapshot.v1.schema.json",
+  "purpose": "Provide Binance USD-M ETH open-interest coverage for mixed-surface fixture validation.",
+  "checks": [
+    "schema-validation",
+    "derivatives-normalization"
+  ],
+  "rawMessages": [
+    {
+      "symbol": "ETHUSDT",
+      "openInterest": "82450.5",
+      "time": 1772798404000,
+      "recvTs": "2026-03-06T12:00:04.060Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "open-interest-snapshot",
+      "symbol": "ETH-USD",
+      "sourceSymbol": "ETHUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BINANCE",
+      "marketType": "perpetual",
+      "openInterest": "82450.5",
+      "exchangeTs": "2026-03-06T12:00:04Z",
+      "recvTs": "2026-03-06T12:00:04.06Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "oi:2026-03-06T12:00:04Z"
+    }
+  ]
+}

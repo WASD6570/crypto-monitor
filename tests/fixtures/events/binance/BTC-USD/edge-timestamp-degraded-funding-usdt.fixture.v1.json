@@ -1,0 +1,46 @@
+{
+  "fixtureVersion": "v1",
+  "id": "binance-btc-usdt-edge-timestamp-degraded-funding",
+  "family": "events",
+  "category": "edge-timestamp-degraded",
+  "scenarioClass": "edge-case",
+  "venue": "BINANCE",
+  "symbol": "BTC-USD",
+  "sourceSymbol": "BTCUSDT",
+  "quoteCurrency": "USDT",
+  "targetSchema": "funding-rate.v1.schema.json",
+  "purpose": "Prove Binance USD-M funding normalization degrades timestamp trust when exchange time skews beyond the strict window.",
+  "checks": [
+    "schema-validation",
+    "derivatives-normalization"
+  ],
+  "rawMessages": [
+    {
+      "e": "markPriceUpdate",
+      "E": 1772798400000,
+      "s": "BTCUSDT",
+      "p": "11794.15000000",
+      "i": "11784.62659091",
+      "r": "0.00038167",
+      "T": 1772812800000,
+      "recvTs": "2026-03-06T12:00:05.040Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "funding-rate",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTCUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BINANCE",
+      "marketType": "perpetual",
+      "fundingRate": "0.00038167",
+      "nextFundingTs": "2026-03-06T16:00:00Z",
+      "exchangeTs": "2026-03-06T12:00:00Z",
+      "recvTs": "2026-03-06T12:00:05.04Z",
+      "timestampStatus": "degraded",
+      "sourceRecordId": "funding:2026-03-06T12:00:00Z"
+    }
+  ]
+}

@@ -90,4 +90,6 @@ The shared contract area is intentionally explicit:
 - Open `http://127.0.0.1:4173/dashboard`.
 - The current Compose stack runs `web` plus a Go-owned `market-state-api` service.
 - Dashboard `/api/market-state/*` responses now come from Go, not frontend runtime mocks.
-- The API still uses deterministic local state for now; this is not live exchange connectivity yet.
+- The default `market-state-api` command now fetches live Binance Spot snapshots for `BTC-USD` and `ETH-USD` behind the existing Go API boundary.
+- `/healthz` reflects process readiness; market-data warm-up, unavailability, and degradation stay visible in the JSON payloads.
+- The first live cutover remains Spot-driven, so `usa` stays explicit and may be unavailable or partial.

@@ -252,6 +252,60 @@ func TestRuntimeSnapshotRecoveryRateLimitStatusRejectsMissingCurrentTime(t *test
 	}
 }
 
+func TestRuntimeSnapshotRefreshStatusReportsDueAfterInterval(t *testing.T) {
+	config := loadBinanceRuntimeConfig(t)
+	runtime, err := NewRuntime(config)
+	if err != nil {
+		t.Fatalf("new runtime: %v", err)
+	}
+
+	status, err := runtime.SnapshotRefreshStatus(time.UnixMilli(1772798820000).UTC(), time.UnixMilli(1772798520000).UTC())
+	if err != nil {
+		t.Fatalf("snapshot refresh status: %v", err)
+	}
+	if !status.Required {
+		t.Fatal("expected snapshot refresh to be required")
+	}
+	if !status.Due {
+		t.Fatal("expected snapshot refresh to be due after interval")
+	}
+	if status.Remaining != 0 {
+		t.Fatalf("remaining = %s, want %s", status.Remaining, 0*time.Second)
+	}
+}
+
+func TestRuntimeSnapshotRefreshStatusReportsRemainingBeforeDue(t *testing.T) {
+	config := loadBinanceRuntimeConfig(t)
+	runtime, err := NewRuntime(config)
+	if err != nil {
+		t.Fatalf("new runtime: %v", err)
+	}
+
+	status, err := runtime.SnapshotRefreshStatus(time.UnixMilli(1772798700000).UTC(), time.UnixMilli(1772798520000).UTC())
+	if err != nil {
+		t.Fatalf("snapshot refresh status: %v", err)
+	}
+	if status.Due {
+		t.Fatal("did not expect snapshot refresh to be due early")
+	}
+	if status.Remaining != 2*time.Minute {
+		t.Fatalf("remaining = %s, want %s", status.Remaining, 2*time.Minute)
+	}
+}
+
+func TestRuntimeSnapshotRefreshStatusRejectsFutureSnapshotTime(t *testing.T) {
+	config := loadBinanceRuntimeConfig(t)
+	runtime, err := NewRuntime(config)
+	if err != nil {
+		t.Fatalf("new runtime: %v", err)
+	}
+
+	now := time.UnixMilli(1772798520000).UTC()
+	if _, err := runtime.SnapshotRefreshStatus(now, now.Add(time.Second)); err == nil {
+		t.Fatal("expected future snapshot time to fail")
+	}
+}
+
 func TestRuntimeEvaluateStalenessReturnsHealthyForFreshMessageAndSnapshot(t *testing.T) {
 	config := loadBinanceRuntimeConfig(t)
 	runtime, err := NewRuntime(config)

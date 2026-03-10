@@ -1,0 +1,49 @@
+{
+  "fixtureVersion": "v1",
+  "id": "binance-btc-usdt-happy-liquidation",
+  "family": "events",
+  "category": "happy-liquidation",
+  "scenarioClass": "happy-path",
+  "venue": "BINANCE",
+  "symbol": "BTC-USD",
+  "sourceSymbol": "BTCUSDT",
+  "quoteCurrency": "USDT",
+  "targetSchema": "liquidation-print.v1.schema.json",
+  "purpose": "Provide a Binance USD-M force-order payload that yields a canonical liquidation event.",
+  "checks": [
+    "schema-validation",
+    "derivatives-normalization"
+  ],
+  "rawMessages": [
+    {
+      "e": "forceOrder",
+      "E": 1772798406000,
+      "o": {
+        "s": "BTCUSDT",
+        "S": "SELL",
+        "q": "0.014",
+        "p": "9910",
+        "T": 1772798406000
+      },
+      "recvTs": "2026-03-06T12:00:06.020Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "liquidation-print",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTCUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BINANCE",
+      "marketType": "perpetual",
+      "side": "sell",
+      "price": "9910",
+      "size": "0.014",
+      "exchangeTs": "2026-03-06T12:00:06Z",
+      "recvTs": "2026-03-06T12:00:06.02Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "liquidation:BTCUSDT:2026-03-06T12:00:06Z:sell:9910:0.014"
+    }
+  ]
+}

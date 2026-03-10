@@ -36,7 +36,7 @@ func TestReplayManifestBuilderFreezesResolvedSnapshots(t *testing.T) {
 	if len(manifest.RawPartitions) != 2 {
 		t.Fatalf("raw partitions = %d, want 2", len(manifest.RawPartitions))
 	}
-	if manifest.RawPartitions[0].LogicalPartition != "2026-03-06/BTC-USD/coinbase/books" {
+	if manifest.RawPartitions[0].LogicalPartition != "2026-03-06/BTC-USD/COINBASE" {
 		t.Fatalf("first partition = %q, want sorted logical partition", manifest.RawPartitions[0].LogicalPartition)
 	}
 }
@@ -81,6 +81,54 @@ func TestReplayRequestNormalizesEquivalentScopes(t *testing.T) {
 	}
 	if leftManifest.ScopeKey != rightManifest.ScopeKey || leftManifest.ConflictKey != rightManifest.ConflictKey || leftManifest.RequestID != rightManifest.RequestID {
 		t.Fatalf("normalized manifest drift: left=%q/%q/%q right=%q/%q/%q", leftManifest.RequestID, leftManifest.ScopeKey, leftManifest.ConflictKey, rightManifest.RequestID, rightManifest.ScopeKey, rightManifest.ConflictKey)
+	}
+}
+
+func TestReplayManifestBuilderAcceptsBinanceMixedSharedAndDedicatedPartitions(t *testing.T) {
+	records := []ingestion.RawPartitionManifestRecord{
+		manifestRecord("BINANCE", "", "hot://raw/BTC-USD/2026-03-06", "sha256:shared"),
+		manifestRecord("BINANCE", string(ingestion.StreamOrderBook), "hot://raw/BTC-USD/2026-03-06/order-book", "sha256:order-book"),
+		manifestRecord("BINANCE", ingestion.RawStreamFamilyFeedHealth, "hot://raw/BTC-USD/2026-03-06/feed-health", "sha256:feed-health"),
+		manifestRecord("BINANCE", string(ingestion.StreamFundingRate), "hot://raw/BTC-USD/2026-03-06/funding-rate", "sha256:funding-rate"),
+	}
+	builder, err := NewManifestBuilder(&stubManifestReader{records: records}, stubSnapshotLoader{snapshot: ConfigSnapshot{
+		Ref:              contracts.ReplaySnapshotRef{SchemaVersion: "v1", Kind: "config", ID: "cfg-1", Version: "v1", Digest: "sha256:cfg"},
+		OrderingPolicyID: orderingPolicyID,
+	}}, contracts.ReplayBuildProvenance{Service: "replay-engine", GitSHA: "deadbeef"})
+	if err != nil {
+		t.Fatalf("new manifest builder: %v", err)
+	}
+	request := replayRequest(contracts.ReplayRuntimeModeInspect)
+	request.Scope.Venues = []string{string(ingestion.VenueBinance)}
+	request.Scope.StreamFamilies = []string{string(ingestion.StreamTopOfBook), string(ingestion.StreamTrades), string(ingestion.StreamOrderBook), ingestion.RawStreamFamilyFeedHealth, string(ingestion.StreamFundingRate)}
+
+	manifest, err := builder.Build(request)
+	if err != nil {
+		t.Fatalf("build binance manifest: %v", err)
+	}
+	if len(manifest.RawPartitions) != 4 {
+		t.Fatalf("raw partitions = %d, want 4", len(manifest.RawPartitions))
+	}
+	got := []string{
+		manifest.RawPartitions[0].LogicalPartition,
+		manifest.RawPartitions[1].LogicalPartition,
+		manifest.RawPartitions[2].LogicalPartition,
+		manifest.RawPartitions[3].LogicalPartition,
+	}
+	want := []string{
+		"2026-03-06/BTC-USD/BINANCE",
+		"2026-03-06/BTC-USD/BINANCE/feed-health",
+		"2026-03-06/BTC-USD/BINANCE/funding-rate",
+		"2026-03-06/BTC-USD/BINANCE/order-book",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("logical partitions = %v, want %v", got, want)
+	}
+	if manifest.RawPartitions[0].Location != "hot://raw/BTC-USD/2026-03-06" {
+		t.Fatalf("shared partition location = %q, want %q", manifest.RawPartitions[0].Location, "hot://raw/BTC-USD/2026-03-06")
+	}
+	if manifest.RawPartitions[0].StorageState != string(ingestion.RawStorageStateHot) {
+		t.Fatalf("shared partition storage state = %q, want %q", manifest.RawPartitions[0].StorageState, ingestion.RawStorageStateHot)
 	}
 }
 
@@ -555,7 +603,7 @@ func replayRequest(mode contracts.ReplayRuntimeMode) contracts.ReplayRunRequest 
 		Scope: contracts.ReplayScope{
 			Symbol:         "BTC-USD",
 			Venues:         []string{"coinbase"},
-			StreamFamilies: []string{"books", "trades"},
+			StreamFamilies: []string{string(ingestion.StreamOrderBook), string(ingestion.StreamTrades)},
 			WindowStart:    "2026-03-06T00:00:00Z",
 			WindowEnd:      "2026-03-06T23:59:59Z",
 		},
@@ -577,13 +625,14 @@ func manifestRecord(venue string, streamFamily string, location string, checksum
 }
 
 func manifestRecordWithState(venue string, streamFamily string, location string, checksum string, state ingestion.RawStorageState) ingestion.RawPartitionManifestRecord {
+	normalizedStreamFamily := normalizeManifestRecordStreamFamily(streamFamily)
 	return ingestion.RawPartitionManifestRecord{
 		SchemaVersion: "v1",
 		LogicalPartition: ingestion.RawPartitionKey{
 			UTCDate:      "2026-03-06",
 			Symbol:       "BTC-USD",
-			Venue:        ingestion.Venue(venue),
-			StreamFamily: streamFamily,
+			Venue:        replayLookupVenue(venue),
+			StreamFamily: normalizedStreamFamily,
 		},
 		StorageState:          state,
 		Location:              location,
@@ -618,12 +667,18 @@ func replayEntry(bucketTimestamp string, sequence int64, sourceID string, canoni
 		SessionRef:             "session-1",
 		BuildVersion:           "test",
 		DuplicateAudit:         ingestion.RawDuplicateAudit{IdentityKey: sourceID, Occurrence: 1},
-		PartitionKey: ingestion.RawPartitionKey{
-			UTCDate:      "2026-03-06",
-			Symbol:       "BTC-USD",
-			Venue:        ingestion.VenueCoinbase,
-			StreamFamily: "trades",
-		},
+		PartitionKey:           ingestion.RouteRawPartition(ingestion.RawAppendEntry{Symbol: "BTC-USD", Venue: ingestion.VenueCoinbase, StreamFamily: string(ingestion.StreamTrades), BucketTimestamp: bucketTimestamp}),
+	}
+}
+
+func normalizeManifestRecordStreamFamily(streamFamily string) string {
+	switch streamFamily {
+	case "books":
+		return string(ingestion.StreamOrderBook)
+	case "trades", string(ingestion.StreamTopOfBook):
+		return ""
+	default:
+		return streamFamily
 	}
 }
 

@@ -1,0 +1,47 @@
+{
+  "fixtureVersion": "v1",
+  "id": "binance-btc-usdt-happy-native-trade",
+  "family": "events",
+  "category": "happy-trades",
+  "scenarioClass": "happy-path",
+  "venue": "BINANCE",
+  "symbol": "BTC-USD",
+  "sourceSymbol": "BTCUSDT",
+  "quoteCurrency": "USDT",
+  "targetSchema": "market-trade.v1.schema.json",
+  "purpose": "Validate native Binance Spot trade payload parsing through the supervisor-to-normalizer handoff.",
+  "checks": [
+    "schema-validation",
+    "normalization",
+    "integration-smoke"
+  ],
+  "rawMessages": [
+    {
+      "e": "trade",
+      "E": 1772798400180,
+      "s": "BTCUSDT",
+      "t": 1001,
+      "p": "64000.10",
+      "q": "0.015",
+      "T": 1772798400100,
+      "m": false,
+      "M": true,
+      "recvTs": "2026-03-06T12:00:00.18Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "market-trade",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTCUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BINANCE",
+      "marketType": "spot",
+      "exchangeTs": "2026-03-06T12:00:00.100Z",
+      "recvTs": "2026-03-06T12:00:00.18Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "trade:1001"
+    }
+  ]
+}

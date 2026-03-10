@@ -88,6 +88,103 @@ func TestNormalizeOrderBookMessageEmitsDegradedFeedHealthOnGap(t *testing.T) {
 	}
 }
 
+func TestNormalizeOrderBookMessageUsesSequenceBackedIdentityForTopOfBookWithoutExchangeTs(t *testing.T) {
+	metadata := BookMetadata{
+		Symbol:        "BTC-USD",
+		SourceSymbol:  "BTCUSDT",
+		QuoteCurrency: "USDT",
+		Venue:         VenueBinance,
+		MarketType:    "spot",
+	}
+	message := OrderBookMessage{
+		Type:         string(BookUpdateTopOfBook),
+		Sequence:     9001,
+		BestBidPrice: "64000.10",
+		BestAskPrice: "64000.20",
+		RecvTs:       "2026-03-06T12:00:00.18Z",
+	}
+
+	result, err := NormalizeOrderBookMessage(metadata, message, &OrderBookSequencer{}, StrictTimestampPolicy())
+	if err != nil {
+		t.Fatalf("normalize top-of-book: %v", err)
+	}
+	if result.SequenceResult.Action != SequenceAcceptedTopOfBook {
+		t.Fatalf("sequence action = %q, want %q", result.SequenceResult.Action, SequenceAcceptedTopOfBook)
+	}
+	if result.OrderBookEvent == nil {
+		t.Fatal("expected canonical top-of-book event")
+	}
+	if result.FeedHealthEvent != nil {
+		t.Fatal("did not expect feed-health event for accepted top-of-book")
+	}
+	if result.OrderBookEvent.SourceRecordID != "ticker:9001" {
+		t.Fatalf("sourceRecordId = %q, want %q", result.OrderBookEvent.SourceRecordID, "ticker:9001")
+	}
+	if result.OrderBookEvent.TimestampStatus != TimestampStatusDegraded {
+		t.Fatalf("timestamp status = %q, want %q", result.OrderBookEvent.TimestampStatus, TimestampStatusDegraded)
+	}
+	if result.OrderBookEvent.TimestampFallbackReason != TimestampReasonExchangeMissingOrInvalid {
+		t.Fatalf("fallback reason = %q, want %q", result.OrderBookEvent.TimestampFallbackReason, TimestampReasonExchangeMissingOrInvalid)
+	}
+	if !result.OrderBookEvent.CanonicalEventTime.Equal(time.Date(2026, time.March, 6, 12, 0, 0, 180000000, time.UTC)) {
+		t.Fatalf("canonical event time = %s, want recv time fallback", result.OrderBookEvent.CanonicalEventTime)
+	}
+}
+
+func TestNormalizeOrderBookMessageAcceptsWindowedBinanceDeltaAfterSnapshot(t *testing.T) {
+	metadata := BookMetadata{
+		Symbol:        "BTC-USD",
+		SourceSymbol:  "BTCUSDT",
+		QuoteCurrency: "USDT",
+		Venue:         VenueBinance,
+		MarketType:    "spot",
+	}
+	sequencer := &OrderBookSequencer{}
+
+	snapshot, err := NormalizeOrderBookMessage(metadata, OrderBookMessage{
+		Type:          "snapshot",
+		FirstSequence: 700,
+		Sequence:      700,
+		BestBidPrice:  "64020.00",
+		BestAskPrice:  "64020.50",
+		RecvTs:        "2026-03-06T12:02:00.25Z",
+	}, sequencer, StrictTimestampPolicy())
+	if err != nil {
+		t.Fatalf("normalize snapshot: %v", err)
+	}
+	delta, err := NormalizeOrderBookMessage(metadata, OrderBookMessage{
+		Type:          "delta",
+		FirstSequence: 700,
+		Sequence:      701,
+		BestBidPrice:  "64020.10",
+		BestAskPrice:  "64020.40",
+		ExchangeTs:    "2026-03-06T12:02:00.2Z",
+		RecvTs:        "2026-03-06T12:02:00.3Z",
+	}, sequencer, StrictTimestampPolicy())
+	if err != nil {
+		t.Fatalf("normalize bridging delta: %v", err)
+	}
+
+	if snapshot.OrderBookEvent == nil || delta.OrderBookEvent == nil {
+		t.Fatal("expected canonical order-book events for snapshot and bridging delta")
+	}
+	if delta.SequenceResult.Action != SequenceAcceptedDelta {
+		t.Fatalf("sequence action = %q, want %q", delta.SequenceResult.Action, SequenceAcceptedDelta)
+	}
+	if delta.OrderBookEvent.SourceRecordID != "book:701" {
+		t.Fatalf("sourceRecordId = %q, want %q", delta.OrderBookEvent.SourceRecordID, "book:701")
+	}
+	if delta.OrderBookEvent.Symbol != "BTC-USD" || delta.OrderBookEvent.SourceSymbol != "BTCUSDT" {
+		t.Fatalf("unexpected provenance: %+v", delta.OrderBookEvent)
+	}
+	if delta.OrderBookEvent.TimestampStatus != TimestampStatusNormal {
+		t.Fatalf("timestamp status = %q, want %q", delta.OrderBookEvent.TimestampStatus, TimestampStatusNormal)
+	}
+	if !delta.OrderBookEvent.CanonicalEventTime.Equal(time.Date(2026, time.March, 6, 12, 2, 0, 200000000, time.UTC)) {
+		t.Fatalf("canonical event time = %s, want exchange time", delta.OrderBookEvent.CanonicalEventTime)
+	}
+}
+
 func loadOrderBookFixture(t *testing.T, relativePath string) orderBookFixture {
 	t.Helper()
 	contents, err := os.ReadFile(filepath.Join(repoRoot(t), relativePath))

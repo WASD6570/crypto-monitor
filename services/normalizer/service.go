@@ -33,6 +33,30 @@ type FeedHealthInput struct {
 	Raw      ingestion.RawWriteContext
 }
 
+type FundingInput struct {
+	Metadata ingestion.DerivativesMetadata
+	Message  ingestion.FundingRateMessage
+	Raw      ingestion.RawWriteContext
+}
+
+type MarkIndexInput struct {
+	Metadata ingestion.DerivativesMetadata
+	Message  ingestion.MarkIndexMessage
+	Raw      ingestion.RawWriteContext
+}
+
+type OpenInterestInput struct {
+	Metadata ingestion.DerivativesMetadata
+	Message  ingestion.OpenInterestMessage
+	Raw      ingestion.RawWriteContext
+}
+
+type LiquidationInput struct {
+	Metadata ingestion.DerivativesMetadata
+	Message  ingestion.LiquidationMessage
+	Raw      ingestion.RawWriteContext
+}
+
 func WithRawEventWriter(writer ingestion.RawEventWriter, options ingestion.RawWriteOptions) Option {
 	return func(service *Service) {
 		service.rawWriter = writer
@@ -95,6 +119,62 @@ func (s *Service) NormalizeFeedHealth(input FeedHealthInput) (ingestion.Canonica
 	return event, nil
 }
 
+func (s *Service) NormalizeFunding(input FundingInput) (ingestion.CanonicalFundingRateEvent, error) {
+	if s == nil {
+		return ingestion.CanonicalFundingRateEvent{}, fmt.Errorf("normalizer service is required")
+	}
+	event, err := ingestion.NormalizeFundingMessage(input.Metadata, input.Message, s.policy)
+	if err != nil {
+		return ingestion.CanonicalFundingRateEvent{}, err
+	}
+	if err := s.appendFundingRaw(input, event); err != nil {
+		return ingestion.CanonicalFundingRateEvent{}, err
+	}
+	return event, nil
+}
+
+func (s *Service) NormalizeMarkIndex(input MarkIndexInput) (ingestion.CanonicalMarkIndexEvent, error) {
+	if s == nil {
+		return ingestion.CanonicalMarkIndexEvent{}, fmt.Errorf("normalizer service is required")
+	}
+	event, err := ingestion.NormalizeMarkIndexMessage(input.Metadata, input.Message, s.policy)
+	if err != nil {
+		return ingestion.CanonicalMarkIndexEvent{}, err
+	}
+	if err := s.appendMarkIndexRaw(input, event); err != nil {
+		return ingestion.CanonicalMarkIndexEvent{}, err
+	}
+	return event, nil
+}
+
+func (s *Service) NormalizeOpenInterest(input OpenInterestInput) (ingestion.CanonicalOpenInterestSnapshotEvent, error) {
+	if s == nil {
+		return ingestion.CanonicalOpenInterestSnapshotEvent{}, fmt.Errorf("normalizer service is required")
+	}
+	event, err := ingestion.NormalizeOpenInterestMessage(input.Metadata, input.Message, s.policy)
+	if err != nil {
+		return ingestion.CanonicalOpenInterestSnapshotEvent{}, err
+	}
+	if err := s.appendOpenInterestRaw(input, event); err != nil {
+		return ingestion.CanonicalOpenInterestSnapshotEvent{}, err
+	}
+	return event, nil
+}
+
+func (s *Service) NormalizeLiquidation(input LiquidationInput) (ingestion.CanonicalLiquidationPrintEvent, error) {
+	if s == nil {
+		return ingestion.CanonicalLiquidationPrintEvent{}, fmt.Errorf("normalizer service is required")
+	}
+	event, err := ingestion.NormalizeLiquidationMessage(input.Metadata, input.Message, s.policy)
+	if err != nil {
+		return ingestion.CanonicalLiquidationPrintEvent{}, err
+	}
+	if err := s.appendLiquidationRaw(input, event); err != nil {
+		return ingestion.CanonicalLiquidationPrintEvent{}, err
+	}
+	return event, nil
+}
+
 func (s *Service) appendTradeRaw(input TradeInput, event ingestion.CanonicalTradeEvent) error {
 	if s.rawWriter == nil {
 		return nil
@@ -136,6 +216,50 @@ func (s *Service) appendFeedHealthRaw(input FeedHealthInput, event ingestion.Can
 		return nil
 	}
 	entry, err := ingestion.BuildRawAppendEntryFromFeedHealth(event, input.Metadata.SourceSymbol, ingestion.RawStreamFamilyFeedHealth, input.Raw, s.rawOptions)
+	if err != nil {
+		return err
+	}
+	return s.rawWriter.Append(entry)
+}
+
+func (s *Service) appendFundingRaw(input FundingInput, event ingestion.CanonicalFundingRateEvent) error {
+	if s.rawWriter == nil {
+		return nil
+	}
+	entry, err := ingestion.BuildRawAppendEntryFromFundingRate(event, input.Metadata, input.Message, input.Raw, s.rawOptions)
+	if err != nil {
+		return err
+	}
+	return s.rawWriter.Append(entry)
+}
+
+func (s *Service) appendMarkIndexRaw(input MarkIndexInput, event ingestion.CanonicalMarkIndexEvent) error {
+	if s.rawWriter == nil {
+		return nil
+	}
+	entry, err := ingestion.BuildRawAppendEntryFromMarkIndex(event, input.Metadata, input.Message, input.Raw, s.rawOptions)
+	if err != nil {
+		return err
+	}
+	return s.rawWriter.Append(entry)
+}
+
+func (s *Service) appendOpenInterestRaw(input OpenInterestInput, event ingestion.CanonicalOpenInterestSnapshotEvent) error {
+	if s.rawWriter == nil {
+		return nil
+	}
+	entry, err := ingestion.BuildRawAppendEntryFromOpenInterest(event, input.Metadata, input.Message, input.Raw, s.rawOptions)
+	if err != nil {
+		return err
+	}
+	return s.rawWriter.Append(entry)
+}
+
+func (s *Service) appendLiquidationRaw(input LiquidationInput, event ingestion.CanonicalLiquidationPrintEvent) error {
+	if s.rawWriter == nil {
+		return nil
+	}
+	entry, err := ingestion.BuildRawAppendEntryFromLiquidation(event, input.Metadata, input.Message, input.Raw, s.rawOptions)
 	if err != nil {
 		return err
 	}

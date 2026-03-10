@@ -1,6 +1,7 @@
 package replayengine
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -98,7 +99,7 @@ func (r *stubManifestReader) ResolveRawPartitions(scope ingestion.RawPartitionLo
 	r.scope = scope
 	resolved := make([]ingestion.RawPartitionManifestRecord, 0, len(r.records))
 	for _, record := range r.records {
-		if record.LogicalPartition.Symbol != scope.Symbol || record.LogicalPartition.Venue != scope.Venue {
+		if record.LogicalPartition.Symbol != scope.Symbol || !strings.EqualFold(string(record.LogicalPartition.Venue), string(scope.Venue)) {
 			continue
 		}
 		if scope.StreamFamily != "" && record.LogicalPartition.StreamFamily != scope.StreamFamily {

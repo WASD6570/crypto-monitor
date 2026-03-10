@@ -31,6 +31,7 @@
       "quoteCurrency": "USDT",
       "venue": "BYBIT",
       "marketType": "perpetual",
+      "openInterest": "82450.5",
       "exchangeTs": "2026-03-06T12:00:04.000Z",
       "recvTs": "2026-03-06T12:00:04.060Z",
       "timestampStatus": "normal",

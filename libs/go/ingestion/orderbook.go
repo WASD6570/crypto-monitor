@@ -21,8 +21,9 @@ const (
 )
 
 type SequencedBookUpdate struct {
-	Kind     BookUpdateKind
-	Sequence int64
+	FirstSequence int64
+	Kind          BookUpdateKind
+	Sequence      int64
 }
 
 type SequenceResult struct {
@@ -49,6 +50,13 @@ func (s *OrderBookSequencer) Apply(update SequencedBookUpdate) (SequenceResult, 
 
 	switch update.Kind {
 	case BookUpdateSnapshot:
+		firstSequence := update.FirstSequence
+		if firstSequence == 0 {
+			firstSequence = update.Sequence
+		}
+		if firstSequence > update.Sequence {
+			return SequenceResult{}, fmt.Errorf("snapshot first sequence cannot exceed final sequence")
+		}
 		s.bootstrapped = true
 		s.lastSequence = update.Sequence
 		s.resyncRequired = false
@@ -59,6 +67,13 @@ func (s *OrderBookSequencer) Apply(update SequencedBookUpdate) (SequenceResult, 
 			ResyncRequired: false,
 		}, nil
 	case BookUpdateDelta:
+		firstSequence := update.FirstSequence
+		if firstSequence == 0 {
+			firstSequence = update.Sequence
+		}
+		if firstSequence > update.Sequence {
+			return SequenceResult{}, fmt.Errorf("delta first sequence cannot exceed final sequence")
+		}
 		if !s.bootstrapped || s.resyncRequired {
 			s.resyncRequired = true
 			return SequenceResult{
@@ -71,7 +86,7 @@ func (s *OrderBookSequencer) Apply(update SequencedBookUpdate) (SequenceResult, 
 		}
 
 		expected := s.lastSequence + 1
-		if update.Sequence == expected {
+		if firstSequence <= expected && update.Sequence >= expected {
 			s.lastSequence = update.Sequence
 			return SequenceResult{
 				Action:         SequenceAcceptedDelta,

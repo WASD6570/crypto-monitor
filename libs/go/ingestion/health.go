@@ -71,6 +71,7 @@ const (
 	ReasonSequenceGap        DegradationReason = "sequence-gap"
 	ReasonReconnectLoop      DegradationReason = "reconnect-loop"
 	ReasonResyncLoop         DegradationReason = "resync-loop"
+	ReasonRateLimit          DegradationReason = "rate-limit"
 	ReasonClockDegraded      DegradationReason = "clock-degraded"
 )
 

@@ -51,6 +51,8 @@ Initiative docs answer:
 - which slices are safe to plan in parallel
 - which epic should be refined next
 
+Do not create initiative-only tracks whose sole output is smoke or integration validation. Validation-only work should stay attached to the owning implementation slice or be executed directly after implementation.
+
 ### Epic Plans
 
 Location:
@@ -73,6 +75,8 @@ Epic plans answer:
 - which child feature plans should be created next
 - which child slices are safe to refine or plan in parallel
 - what still blocks direct implementation
+
+Do not refine smoke-only or integration-only child features. If an epic needs combined validation after implementation, record it as a direct post-implementation check rather than a child plan.
 
 ### Feature Plans
 
@@ -147,6 +151,8 @@ The feature planner should read:
 - only the relevant program docs sections when they materially affect the feature
 
 Then it should read any relevant epic under `plans/epics/{epic_name}/` and write the active feature plan under `plans/{feature_name}/`.
+
+If the remaining work is only smoke or integration validation, do not write a feature plan. Run the validation directly and record the result in the current handoff or testing report.
 
 Active feature plans remain in `plans/{feature_name}/` only until implementation and validation are complete. After that, move the full plan directory, including `testing-report.md`, to `plans/completed/{feature_name}/` and update handoff references to the archive path.
 

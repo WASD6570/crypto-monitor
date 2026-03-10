@@ -239,6 +239,7 @@ func TestIngestionRunbookAlignmentUsesSharedHealthVocabulary(t *testing.T) {
 	paths := []string{
 		"docs/runbooks/ingestion-feed-health-ops.md",
 		"docs/runbooks/degraded-feed-investigation.md",
+		"docs/runbooks/binance-usdm-context-sensors.md",
 	}
 	requiredTerms := []string{
 		"HEALTHY",
@@ -250,6 +251,7 @@ func TestIngestionRunbookAlignmentUsesSharedHealthVocabulary(t *testing.T) {
 		"sequence-gap",
 		"reconnect-loop",
 		"resync-loop",
+		"rate-limit",
 		"clock-degraded",
 	}
 

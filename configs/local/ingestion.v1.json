@@ -21,7 +21,9 @@
       },
       "rest": {
         "snapshotRecoveryPerMinuteLimit": 30,
-        "snapshotCooldownMs": 1000
+        "snapshotCooldownMs": 1000,
+        "openInterestPollIntervalMs": 5000,
+        "openInterestPollsPerMinuteLimit": 30
       },
       "health": {
         "messageStaleAfterMs": 15000,
@@ -56,7 +58,9 @@
       },
       "rest": {
         "snapshotRecoveryPerMinuteLimit": 30,
-        "snapshotCooldownMs": 1000
+        "snapshotCooldownMs": 1000,
+        "openInterestPollIntervalMs": 5000,
+        "openInterestPollsPerMinuteLimit": 30
       },
       "health": {
         "messageStaleAfterMs": 15000,
@@ -91,7 +95,9 @@
       },
       "rest": {
         "snapshotRecoveryPerMinuteLimit": 0,
-        "snapshotCooldownMs": 0
+        "snapshotCooldownMs": 0,
+        "openInterestPollIntervalMs": 0,
+        "openInterestPollsPerMinuteLimit": 0
       },
       "health": {
         "messageStaleAfterMs": 15000,
@@ -121,7 +127,9 @@
       },
       "rest": {
         "snapshotRecoveryPerMinuteLimit": 24,
-        "snapshotCooldownMs": 1500
+        "snapshotCooldownMs": 1500,
+        "openInterestPollIntervalMs": 0,
+        "openInterestPollsPerMinuteLimit": 0
       },
       "health": {
         "messageStaleAfterMs": 12000,

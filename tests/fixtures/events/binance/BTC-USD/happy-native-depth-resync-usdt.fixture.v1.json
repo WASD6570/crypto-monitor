@@ -1,0 +1,76 @@
+{
+  "fixtureVersion": "v1",
+  "id": "binance-btc-usdt-happy-native-depth-resync",
+  "family": "events",
+  "category": "edge-forced-resync",
+  "scenarioClass": "edge-case",
+  "venue": "BINANCE",
+  "symbol": "BTC-USD",
+  "sourceSymbol": "BTCUSDT",
+  "quoteCurrency": "USDT",
+  "targetSchema": "order-book-top.v1.schema.json",
+  "purpose": "Validate Binance spot depth recovery after a sequence gap using a replacement snapshot and buffered post-gap deltas.",
+  "checks": [
+    "schema-validation",
+    "resync-recovery",
+    "integration-smoke"
+  ],
+  "snapshotRaw": {
+    "lastUpdateId": 704,
+    "bids": [["64020.40", "0.95"]],
+    "asks": [["64020.70", "0.80"]],
+    "recvTs": "2026-03-06T12:02:01.70Z"
+  },
+  "rawMessages": [
+    {
+      "e": "depthUpdate",
+      "E": 1772798521200,
+      "s": "BTCUSDT",
+      "U": 703,
+      "u": 704,
+      "b": [["64020.40", "0.95"]],
+      "a": [["64020.70", "0.80"]],
+      "recvTs": "2026-03-06T12:02:01.20Z"
+    },
+    {
+      "e": "depthUpdate",
+      "E": 1772798521800,
+      "s": "BTCUSDT",
+      "U": 705,
+      "u": 706,
+      "b": [["64020.50", "0.90"]],
+      "a": [["64020.80", "0.75"]],
+      "recvTs": "2026-03-06T12:02:01.82Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "order-book-top",
+      "bookAction": "snapshot",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTCUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BINANCE",
+      "marketType": "spot",
+      "exchangeTs": "",
+      "recvTs": "2026-03-06T12:02:01.7Z",
+      "timestampStatus": "degraded",
+      "sourceRecordId": "book:704"
+    },
+    {
+      "schemaVersion": "v1",
+      "eventType": "order-book-top",
+      "bookAction": "delta",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTCUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BINANCE",
+      "marketType": "spot",
+      "exchangeTs": "2026-03-06T12:02:01.8Z",
+      "recvTs": "2026-03-06T12:02:01.82Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "book:706"
+    }
+  ]
+}

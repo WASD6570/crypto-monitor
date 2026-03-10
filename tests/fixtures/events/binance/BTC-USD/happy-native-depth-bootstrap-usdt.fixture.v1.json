@@ -1,0 +1,100 @@
+{
+  "fixtureVersion": "v1",
+  "id": "binance-btc-usdt-happy-native-depth-bootstrap",
+  "family": "events",
+  "category": "happy-order-book-snapshot-delta",
+  "scenarioClass": "happy-path",
+  "venue": "BINANCE",
+  "symbol": "BTC-USD",
+  "sourceSymbol": "BTCUSDT",
+  "quoteCurrency": "USDT",
+  "targetSchema": "order-book-top.v1.schema.json",
+  "purpose": "Validate Binance spot depth bootstrap alignment from supervisor-fed deltas through the snapshot handoff and canonical normalizer path.",
+  "checks": [
+    "schema-validation",
+    "normalization",
+    "integration-smoke"
+  ],
+  "snapshotRaw": {
+    "lastUpdateId": 700,
+    "bids": [["64020.00", "1.10"]],
+    "asks": [["64020.50", "0.80"]],
+    "recvTs": "2026-03-06T12:02:00.25Z"
+  },
+  "rawMessages": [
+    {
+      "e": "depthUpdate",
+      "E": 1772798520100,
+      "s": "BTCUSDT",
+      "U": 698,
+      "u": 700,
+      "b": [["64019.90", "1.15"]],
+      "a": [["64020.60", "0.85"]],
+      "recvTs": "2026-03-06T12:02:00.12Z"
+    },
+    {
+      "e": "depthUpdate",
+      "E": 1772798520200,
+      "s": "BTCUSDT",
+      "U": 700,
+      "u": 701,
+      "b": [["64020.10", "1.05"]],
+      "a": [["64020.40", "0.75"]],
+      "recvTs": "2026-03-06T12:02:00.30Z"
+    },
+    {
+      "e": "depthUpdate",
+      "E": 1772798520300,
+      "s": "BTCUSDT",
+      "U": 702,
+      "u": 702,
+      "b": [["64020.20", "1.00"]],
+      "a": [["64020.30", "0.70"]],
+      "recvTs": "2026-03-06T12:02:00.40Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "order-book-top",
+      "bookAction": "snapshot",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTCUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BINANCE",
+      "marketType": "spot",
+      "exchangeTs": "",
+      "recvTs": "2026-03-06T12:02:00.25Z",
+      "timestampStatus": "degraded",
+      "sourceRecordId": "book:700"
+    },
+    {
+      "schemaVersion": "v1",
+      "eventType": "order-book-top",
+      "bookAction": "delta",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTCUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BINANCE",
+      "marketType": "spot",
+      "exchangeTs": "2026-03-06T12:02:00.2Z",
+      "recvTs": "2026-03-06T12:02:00.3Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "book:701"
+    },
+    {
+      "schemaVersion": "v1",
+      "eventType": "order-book-top",
+      "bookAction": "delta",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTCUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BINANCE",
+      "marketType": "spot",
+      "exchangeTs": "2026-03-06T12:02:00.3Z",
+      "recvTs": "2026-03-06T12:02:00.4Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "book:702"
+    }
+  ]
+}

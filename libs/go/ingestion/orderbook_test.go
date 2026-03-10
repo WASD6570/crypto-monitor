@@ -28,6 +28,25 @@ func TestOrderBookSequencerAcceptsSnapshotThenSequentialDelta(t *testing.T) {
 	}
 }
 
+func TestOrderBookSequencerAcceptsBridgingDeltaWindow(t *testing.T) {
+	var sequencer OrderBookSequencer
+
+	if _, err := sequencer.Apply(SequencedBookUpdate{Kind: BookUpdateSnapshot, Sequence: 700}); err != nil {
+		t.Fatalf("apply snapshot: %v", err)
+	}
+
+	result, err := sequencer.Apply(SequencedBookUpdate{Kind: BookUpdateDelta, FirstSequence: 700, Sequence: 701})
+	if err != nil {
+		t.Fatalf("apply bridging delta: %v", err)
+	}
+	if result.Action != SequenceAcceptedDelta {
+		t.Fatalf("delta action = %q, want %q", result.Action, SequenceAcceptedDelta)
+	}
+	if sequencer.LastSequence() != 701 {
+		t.Fatalf("last sequence = %d, want %d", sequencer.LastSequence(), 701)
+	}
+}
+
 func TestOrderBookSequencerIgnoresStaleDelta(t *testing.T) {
 	var sequencer OrderBookSequencer
 	_, _ = sequencer.Apply(SequencedBookUpdate{Kind: BookUpdateSnapshot, Sequence: 500})

@@ -1,0 +1,40 @@
+{
+  "fixtureVersion": "v1",
+  "id": "binance-eth-usdt-edge-timestamp-degraded-open-interest",
+  "family": "events",
+  "category": "edge-timestamp-degraded",
+  "scenarioClass": "edge-case",
+  "venue": "BINANCE",
+  "symbol": "ETH-USD",
+  "sourceSymbol": "ETHUSDT",
+  "quoteCurrency": "USDT",
+  "targetSchema": "open-interest-snapshot.v1.schema.json",
+  "purpose": "Prove Binance USD-M REST open-interest normalization degrades timestamp trust when exchange time is missing.",
+  "checks": [
+    "schema-validation",
+    "derivatives-normalization"
+  ],
+  "rawMessages": [
+    {
+      "symbol": "ETHUSDT",
+      "openInterest": "82450.5",
+      "recvTs": "2026-03-06T12:00:04.060Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "open-interest-snapshot",
+      "symbol": "ETH-USD",
+      "sourceSymbol": "ETHUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BINANCE",
+      "marketType": "perpetual",
+      "openInterest": "82450.5",
+      "exchangeTs": "",
+      "recvTs": "2026-03-06T12:00:04.06Z",
+      "timestampStatus": "degraded",
+      "sourceRecordId": "oi:2026-03-06T12:00:04.06Z"
+    }
+  ]
+}

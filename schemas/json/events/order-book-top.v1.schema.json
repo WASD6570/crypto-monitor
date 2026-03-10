@@ -26,7 +26,7 @@
     },
     "bookAction": {
       "type": "string",
-      "enum": ["snapshot", "delta"]
+      "enum": ["snapshot", "delta", "top-of-book"]
     },
     "symbol": {
       "type": "string",
@@ -49,8 +49,16 @@
       "enum": ["spot", "perpetual"]
     },
     "exchangeTs": {
-      "type": "string",
-      "format": "date-time"
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "string",
+          "const": ""
+        }
+      ]
     },
     "recvTs": {
       "type": "string",

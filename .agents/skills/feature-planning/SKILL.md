@@ -18,6 +18,8 @@ compatibility: opencode
 
 Use this for a single bounded child feature that needs a clear, durable active plan across agents.
 
+Do not use this for smoke-only or integration-only validation work. If the work is just proving an already-implemented flow, run the validation directly or use `feature-testing` instead of writing `plans/{feature_name}/` artifacts.
+
 If the input already exists only as a broad epic under `plans/epics/{epic_name}/`, stop and run `program-refining` first.
 
 If the input is a large initiative brief that clearly contains multiple features or workstreams, use `program-planning` first and then return to this skill for each bounded slice.
@@ -106,12 +108,14 @@ Plans should preserve the live/research boundary and avoid overdesign.
 
 ### Testing file (`0n-testing.md` or `04-testing.md`) (required)
 
-- Define a minimal, high-signal smoke matrix for the feature's key journeys.
+- Define a minimal, high-signal validation matrix for the feature's key journeys.
 - Include auth/authz checks, critical negative cases, and idempotency checks when relevant.
 - Specify concrete endpoint, CLI, replay, or job sequence and required inputs.
 - Specify verification checklist for side effects, artifacts, persisted state, and logs as needed.
 - Add replay determinism and Go/Python parity checks when the feature depends on shared algorithms or fixtures.
 - Include expected output artifact path: `plans/{feature_name}/testing-report.md` while the feature is active; once the feature is implemented and validated, move the entire directory to `plans/completed/{feature_name}/` so the report archives with the rest of the plan.
+
+Never create a feature plan whose only purpose is smoke coverage, integration proof, or test orchestration. That work belongs in direct validation after the owning implementation lands.
 
 ## Output location
 

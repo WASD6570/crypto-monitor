@@ -1,0 +1,47 @@
+{
+  "fixtureVersion": "v1",
+  "id": "binance-btc-usdt-edge-depth-recovery-cooldown-blocked",
+  "family": "events",
+  "category": "edge-forced-resync",
+  "scenarioClass": "edge-case",
+  "venue": "BINANCE",
+  "symbol": "BTC-USD",
+  "sourceSymbol": "BTCUSDT",
+  "quoteCurrency": "USDT",
+  "targetSchema": "feed-health.v1.schema.json",
+  "purpose": "Exercise a gap-triggered depth recovery attempt that stays blocked by snapshot cooldown while remaining explicitly degraded.",
+  "checks": [
+    "schema-validation",
+    "gap-detection",
+    "cooldown-block"
+  ],
+  "rawMessages": [
+    {
+      "e": "depthUpdate",
+      "E": 1772798520600,
+      "s": "BTCUSDT",
+      "U": 703,
+      "u": 704,
+      "b": [["64020.40", "0.95"]],
+      "a": [["64020.70", "0.80"]],
+      "recvTs": "2026-03-06T12:02:00.60Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "feed-health",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTCUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BINANCE",
+      "marketType": "spot",
+      "exchangeTs": "2026-03-06T12:02:00.6Z",
+      "recvTs": "2026-03-06T12:02:00.6Z",
+      "timestampStatus": "normal",
+      "feedHealthState": "DEGRADED",
+      "degradationReasons": ["connection-not-ready", "sequence-gap"],
+      "sourceRecordId": "runtime:binance-spot-depth:BTCUSDT"
+    }
+  ]
+}

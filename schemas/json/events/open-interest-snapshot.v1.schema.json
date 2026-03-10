@@ -12,6 +12,7 @@
     "quoteCurrency",
     "venue",
     "marketType",
+    "openInterest",
     "exchangeTs",
     "recvTs",
     "timestampStatus",
@@ -44,9 +45,21 @@
       "type": "string",
       "enum": ["spot", "perpetual"]
     },
-    "exchangeTs": {
+    "openInterest": {
       "type": "string",
-      "format": "date-time"
+      "minLength": 1
+    },
+    "exchangeTs": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "string",
+          "const": ""
+        }
+      ]
     },
     "recvTs": {
       "type": "string",

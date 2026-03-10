@@ -41,8 +41,10 @@ type WebsocketConfig struct {
 }
 
 type RestConfig struct {
-	SnapshotRecoveryPerMinuteLimit int `json:"snapshotRecoveryPerMinuteLimit"`
-	SnapshotCooldownMs             int `json:"snapshotCooldownMs"`
+	SnapshotRecoveryPerMinuteLimit  int `json:"snapshotRecoveryPerMinuteLimit"`
+	SnapshotCooldownMs              int `json:"snapshotCooldownMs"`
+	OpenInterestPollIntervalMs      int `json:"openInterestPollIntervalMs"`
+	OpenInterestPollsPerMinuteLimit int `json:"openInterestPollsPerMinuteLimit"`
 }
 
 type HealthThresholds struct {
@@ -59,18 +61,20 @@ type SnapshotRefreshPolicy struct {
 }
 
 type VenueRuntimeConfig struct {
-	Venue                          Venue
-	ServicePath                    string
-	Symbols                        []string
-	NormalizerHandoff              NormalizerHandoffConfig
-	Adapter                        AdapterConfig
-	HeartbeatTimeout               time.Duration
-	ConnectsPerMinuteLimit         int
-	ResubscribeOnReconnect         bool
-	SnapshotRecoveryPerMinuteLimit int
-	SnapshotCooldown               time.Duration
-	SnapshotRefreshRequired        bool
-	SnapshotRefreshInterval        time.Duration
+	Venue                           Venue
+	ServicePath                     string
+	Symbols                         []string
+	NormalizerHandoff               NormalizerHandoffConfig
+	Adapter                         AdapterConfig
+	HeartbeatTimeout                time.Duration
+	ConnectsPerMinuteLimit          int
+	ResubscribeOnReconnect          bool
+	SnapshotRecoveryPerMinuteLimit  int
+	SnapshotCooldown                time.Duration
+	OpenInterestPollInterval        time.Duration
+	OpenInterestPollsPerMinuteLimit int
+	SnapshotRefreshRequired         bool
+	SnapshotRefreshInterval         time.Duration
 }
 
 func LoadEnvironmentConfig(path string) (EnvironmentConfig, error) {
@@ -147,8 +151,8 @@ func (v VenueRuntimeSource) RuntimeConfig(venue Venue, symbols []string, handoff
 	if v.Websocket.ConnectsPerMinuteLimit <= 0 {
 		return VenueRuntimeConfig{}, fmt.Errorf("connects per minute limit must be positive")
 	}
-	if v.Rest.SnapshotRecoveryPerMinuteLimit < 0 || v.Rest.SnapshotCooldownMs < 0 {
-		return VenueRuntimeConfig{}, fmt.Errorf("snapshot recovery limits must be non-negative")
+	if v.Rest.SnapshotRecoveryPerMinuteLimit < 0 || v.Rest.SnapshotCooldownMs < 0 || v.Rest.OpenInterestPollIntervalMs < 0 || v.Rest.OpenInterestPollsPerMinuteLimit < 0 {
+		return VenueRuntimeConfig{}, fmt.Errorf("rest limits must be non-negative")
 	}
 	if v.Health.MessageStaleAfterMs <= 0 || v.Health.SnapshotStaleAfterMs <= 0 {
 		return VenueRuntimeConfig{}, fmt.Errorf("health stale thresholds must be positive")
@@ -187,10 +191,13 @@ func (v VenueRuntimeSource) RuntimeConfig(venue Venue, symbols []string, handoff
 	}
 
 	hasSnapshotStream := false
+	hasOpenInterestStream := false
 	for _, stream := range v.Streams {
 		if stream.SnapshotRequired {
 			hasSnapshotStream = true
-			break
+		}
+		if stream.Kind == StreamOpenInterest {
+			hasOpenInterestStream = true
 		}
 	}
 	if v.SnapshotRefreshPolicy.Required && !hasSnapshotStream {
@@ -199,19 +206,29 @@ func (v VenueRuntimeSource) RuntimeConfig(venue Venue, symbols []string, handoff
 	if !v.SnapshotRefreshPolicy.Required && hasSnapshotStream {
 		return VenueRuntimeConfig{}, fmt.Errorf("snapshot refresh is disabled but snapshotRequired streams are configured")
 	}
+	if hasOpenInterestStream {
+		if v.Rest.OpenInterestPollIntervalMs <= 0 {
+			return VenueRuntimeConfig{}, fmt.Errorf("open interest poll interval must be positive when open-interest stream is configured")
+		}
+		if v.Rest.OpenInterestPollsPerMinuteLimit <= 0 {
+			return VenueRuntimeConfig{}, fmt.Errorf("open interest polls per-minute limit must be positive when open-interest stream is configured")
+		}
+	}
 
 	return VenueRuntimeConfig{
-		Venue:                          venue,
-		ServicePath:                    v.ServicePath,
-		Symbols:                        append([]string(nil), symbols...),
-		NormalizerHandoff:              handoff,
-		Adapter:                        adapter,
-		HeartbeatTimeout:               time.Duration(v.Websocket.HeartbeatTimeoutMs) * time.Millisecond,
-		ConnectsPerMinuteLimit:         v.Websocket.ConnectsPerMinuteLimit,
-		ResubscribeOnReconnect:         v.Websocket.ResubscribeOnReconnect,
-		SnapshotRecoveryPerMinuteLimit: v.Rest.SnapshotRecoveryPerMinuteLimit,
-		SnapshotCooldown:               time.Duration(v.Rest.SnapshotCooldownMs) * time.Millisecond,
-		SnapshotRefreshRequired:        v.SnapshotRefreshPolicy.Required,
-		SnapshotRefreshInterval:        time.Duration(v.SnapshotRefreshPolicy.RefreshIntervalMs) * time.Millisecond,
+		Venue:                           venue,
+		ServicePath:                     v.ServicePath,
+		Symbols:                         append([]string(nil), symbols...),
+		NormalizerHandoff:               handoff,
+		Adapter:                         adapter,
+		HeartbeatTimeout:                time.Duration(v.Websocket.HeartbeatTimeoutMs) * time.Millisecond,
+		ConnectsPerMinuteLimit:          v.Websocket.ConnectsPerMinuteLimit,
+		ResubscribeOnReconnect:          v.Websocket.ResubscribeOnReconnect,
+		SnapshotRecoveryPerMinuteLimit:  v.Rest.SnapshotRecoveryPerMinuteLimit,
+		SnapshotCooldown:                time.Duration(v.Rest.SnapshotCooldownMs) * time.Millisecond,
+		OpenInterestPollInterval:        time.Duration(v.Rest.OpenInterestPollIntervalMs) * time.Millisecond,
+		OpenInterestPollsPerMinuteLimit: v.Rest.OpenInterestPollsPerMinuteLimit,
+		SnapshotRefreshRequired:         v.SnapshotRefreshPolicy.Required,
+		SnapshotRefreshInterval:         time.Duration(v.SnapshotRefreshPolicy.RefreshIntervalMs) * time.Millisecond,
 	}, nil
 }

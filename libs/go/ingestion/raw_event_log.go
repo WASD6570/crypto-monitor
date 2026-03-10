@@ -358,6 +358,133 @@ func BuildRawAppendEntryFromFeedHealth(event CanonicalFeedHealthEvent, sourceIns
 	})
 }
 
+func BuildRawAppendEntryFromFundingRate(event CanonicalFundingRateEvent, metadata DerivativesMetadata, message FundingRateMessage, context RawWriteContext, options RawWriteOptions) (RawAppendEntry, error) {
+	if event.SchemaVersion != "v1" {
+		return RawAppendEntry{}, fmt.Errorf("unsupported canonical funding schema version %q", event.SchemaVersion)
+	}
+	if event.EventType != "funding-rate" {
+		return RawAppendEntry{}, fmt.Errorf("unsupported canonical funding event type %q", event.EventType)
+	}
+	return newRawAppendEntry(rawAppendEntryArgs{
+		canonicalSchemaVersion:  event.SchemaVersion,
+		canonicalEventType:      event.EventType,
+		canonicalPayload:        event,
+		venueMessageID:          derivativesVenueMessageID(message.ExchangeTs, message.RecvTs),
+		streamKey:               string(StreamFundingRate),
+		streamFamily:            string(StreamFundingRate),
+		symbol:                  event.Symbol,
+		venue:                   event.Venue,
+		marketType:              event.MarketType,
+		sourceInstrumentID:      metadata.SourceSymbol,
+		exchangeTs:              event.ExchangeTs,
+		recvTs:                  event.RecvTs,
+		canonicalEventTime:      event.CanonicalEventTime,
+		timestampFallbackReason: event.TimestampFallbackReason,
+		timestampStatus:         event.TimestampStatus,
+		degradedFeedRef:         context.DegradedFeedRef,
+		context:                 context,
+		options:                 options,
+	})
+}
+
+func BuildRawAppendEntryFromMarkIndex(event CanonicalMarkIndexEvent, metadata DerivativesMetadata, message MarkIndexMessage, context RawWriteContext, options RawWriteOptions) (RawAppendEntry, error) {
+	if event.SchemaVersion != "v1" {
+		return RawAppendEntry{}, fmt.Errorf("unsupported canonical mark-index schema version %q", event.SchemaVersion)
+	}
+	if event.EventType != "mark-index" {
+		return RawAppendEntry{}, fmt.Errorf("unsupported canonical mark-index event type %q", event.EventType)
+	}
+	return newRawAppendEntry(rawAppendEntryArgs{
+		canonicalSchemaVersion:  event.SchemaVersion,
+		canonicalEventType:      event.EventType,
+		canonicalPayload:        event,
+		venueMessageID:          derivativesVenueMessageID(message.ExchangeTs, message.RecvTs),
+		streamKey:               string(StreamMarkIndex),
+		streamFamily:            string(StreamMarkIndex),
+		symbol:                  event.Symbol,
+		venue:                   event.Venue,
+		marketType:              event.MarketType,
+		sourceInstrumentID:      metadata.SourceSymbol,
+		exchangeTs:              event.ExchangeTs,
+		recvTs:                  event.RecvTs,
+		canonicalEventTime:      event.CanonicalEventTime,
+		timestampFallbackReason: event.TimestampFallbackReason,
+		timestampStatus:         event.TimestampStatus,
+		degradedFeedRef:         context.DegradedFeedRef,
+		context:                 context,
+		options:                 options,
+	})
+}
+
+func BuildRawAppendEntryFromOpenInterest(event CanonicalOpenInterestSnapshotEvent, metadata DerivativesMetadata, message OpenInterestMessage, context RawWriteContext, options RawWriteOptions) (RawAppendEntry, error) {
+	if event.SchemaVersion != "v1" {
+		return RawAppendEntry{}, fmt.Errorf("unsupported canonical open-interest schema version %q", event.SchemaVersion)
+	}
+	if event.EventType != "open-interest-snapshot" {
+		return RawAppendEntry{}, fmt.Errorf("unsupported canonical open-interest event type %q", event.EventType)
+	}
+	return newRawAppendEntry(rawAppendEntryArgs{
+		canonicalSchemaVersion:  event.SchemaVersion,
+		canonicalEventType:      event.EventType,
+		canonicalPayload:        event,
+		venueMessageID:          derivativesVenueMessageID(message.ExchangeTs, message.RecvTs),
+		streamKey:               string(StreamOpenInterest),
+		streamFamily:            string(StreamOpenInterest),
+		symbol:                  event.Symbol,
+		venue:                   event.Venue,
+		marketType:              event.MarketType,
+		sourceInstrumentID:      metadata.SourceSymbol,
+		exchangeTs:              event.ExchangeTs,
+		recvTs:                  event.RecvTs,
+		canonicalEventTime:      event.CanonicalEventTime,
+		timestampFallbackReason: event.TimestampFallbackReason,
+		timestampStatus:         event.TimestampStatus,
+		degradedFeedRef:         context.DegradedFeedRef,
+		context:                 context,
+		options:                 options,
+	})
+}
+
+func BuildRawAppendEntryFromLiquidation(event CanonicalLiquidationPrintEvent, metadata DerivativesMetadata, message LiquidationMessage, context RawWriteContext, options RawWriteOptions) (RawAppendEntry, error) {
+	if event.SchemaVersion != "v1" {
+		return RawAppendEntry{}, fmt.Errorf("unsupported canonical liquidation schema version %q", event.SchemaVersion)
+	}
+	if event.EventType != "liquidation-print" {
+		return RawAppendEntry{}, fmt.Errorf("unsupported canonical liquidation event type %q", event.EventType)
+	}
+	venueMessageID := message.LiquidationID
+	if venueMessageID == "" {
+		venueMessageID = derivativesVenueMessageID(message.ExchangeTs, message.RecvTs)
+	}
+	return newRawAppendEntry(rawAppendEntryArgs{
+		canonicalSchemaVersion:  event.SchemaVersion,
+		canonicalEventType:      event.EventType,
+		canonicalPayload:        event,
+		venueMessageID:          venueMessageID,
+		streamKey:               string(StreamLiquidation),
+		streamFamily:            string(StreamLiquidation),
+		symbol:                  event.Symbol,
+		venue:                   event.Venue,
+		marketType:              event.MarketType,
+		sourceInstrumentID:      metadata.SourceSymbol,
+		exchangeTs:              event.ExchangeTs,
+		recvTs:                  event.RecvTs,
+		canonicalEventTime:      event.CanonicalEventTime,
+		timestampFallbackReason: event.TimestampFallbackReason,
+		timestampStatus:         event.TimestampStatus,
+		degradedFeedRef:         context.DegradedFeedRef,
+		context:                 context,
+		options:                 options,
+	})
+}
+
+func derivativesVenueMessageID(exchangeTs, recvTs string) string {
+	if exchangeTs != "" {
+		return exchangeTs
+	}
+	return recvTs
+}
+
 func RouteRawPartition(entry RawAppendEntry) RawPartitionKey {
 	bucketTime, err := time.Parse(time.RFC3339Nano, entry.BucketTimestamp)
 	if err != nil {
@@ -511,6 +638,9 @@ func isLateRawEvent(bucketTime time.Time, recvTimestamp string, lateAfter time.D
 
 func rawIdentityPrecedenceKey(venueMessageID string, venueSequence int64, streamKey, canonicalEventID string) string {
 	if venueMessageID != "" {
+		if streamKey != "" {
+			return fmt.Sprintf("message:%s:%s", streamKey, venueMessageID)
+		}
 		return "message:" + venueMessageID
 	}
 	if venueSequence > 0 && streamKey != "" {

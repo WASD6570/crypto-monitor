@@ -27,12 +27,29 @@ type Provider interface {
 	CurrentSymbolState(ctx context.Context, symbol string) (SymbolStateResponse, error)
 }
 
+type SlowContextReader interface {
+	QueryAsset(query slowcontext.AssetQuery) (slowcontext.AssetContextResponse, error)
+}
+
+type currentStateSource interface {
+	Bundle(ctx context.Context, now time.Time) (currentStateBundle, error)
+}
+
 type Handler struct {
 	provider Provider
 }
 
 type DeterministicProvider struct {
-	clock func() time.Time
+	provider *currentStateProvider
+}
+
+type LiveSpotProvider struct {
+	provider *currentStateProvider
+}
+
+type currentStateProvider struct {
+	clock  func() time.Time
+	source currentStateSource
 }
 
 type healthResponse struct {
@@ -64,21 +81,74 @@ func (h *Handler) Routes() http.Handler {
 }
 
 func NewDeterministicProvider() *DeterministicProvider {
-	return &DeterministicProvider{
-		clock: func() time.Time {
-			return time.Now().UTC()
-		},
+	provider, err := NewDeterministicProviderWithClock(func() time.Time {
+		return time.Now().UTC()
+	})
+	if err != nil {
+		panic(err)
 	}
+	return provider
 }
 
 func NewDeterministicProviderWithClock(clock func() time.Time) (*DeterministicProvider, error) {
-	if clock == nil {
-		return nil, fmt.Errorf("clock is required")
+	provider, err := newCurrentStateProvider(deterministicSource{}, clock)
+	if err != nil {
+		return nil, err
 	}
-	return &DeterministicProvider{clock: clock}, nil
+	return &DeterministicProvider{provider: provider}, nil
 }
 
 func (p *DeterministicProvider) CurrentGlobalState(ctx context.Context) (features.MarketStateCurrentGlobalResponse, error) {
+	if p == nil || p.provider == nil {
+		return features.MarketStateCurrentGlobalResponse{}, fmt.Errorf("provider is required")
+	}
+	return p.provider.CurrentGlobalState(ctx)
+}
+
+func (p *DeterministicProvider) CurrentSymbolState(ctx context.Context, symbol string) (SymbolStateResponse, error) {
+	if p == nil || p.provider == nil {
+		return SymbolStateResponse{}, fmt.Errorf("provider is required")
+	}
+	return p.provider.CurrentSymbolState(ctx, symbol)
+}
+
+func NewLiveSpotProvider(reader SpotCurrentStateReader, clock func() time.Time, slowContextReader SlowContextReader) (*LiveSpotProvider, error) {
+	source, err := newSpotLiveCurrentStateSource(reader, slowContextReader)
+	if err != nil {
+		return nil, err
+	}
+	provider, err := newCurrentStateProvider(source, clock)
+	if err != nil {
+		return nil, err
+	}
+	return &LiveSpotProvider{provider: provider}, nil
+}
+
+func (p *LiveSpotProvider) CurrentGlobalState(ctx context.Context) (features.MarketStateCurrentGlobalResponse, error) {
+	if p == nil || p.provider == nil {
+		return features.MarketStateCurrentGlobalResponse{}, fmt.Errorf("provider is required")
+	}
+	return p.provider.CurrentGlobalState(ctx)
+}
+
+func (p *LiveSpotProvider) CurrentSymbolState(ctx context.Context, symbol string) (SymbolStateResponse, error) {
+	if p == nil || p.provider == nil {
+		return SymbolStateResponse{}, fmt.Errorf("provider is required")
+	}
+	return p.provider.CurrentSymbolState(ctx, symbol)
+}
+
+func newCurrentStateProvider(source currentStateSource, clock func() time.Time) (*currentStateProvider, error) {
+	if source == nil {
+		return nil, fmt.Errorf("source is required")
+	}
+	if clock == nil {
+		return nil, fmt.Errorf("clock is required")
+	}
+	return &currentStateProvider{clock: clock, source: source}, nil
+}
+
+func (p *currentStateProvider) CurrentGlobalState(ctx context.Context) (features.MarketStateCurrentGlobalResponse, error) {
 	bundle, err := p.currentStateBundle(ctx)
 	if err != nil {
 		return features.MarketStateCurrentGlobalResponse{}, err
@@ -86,7 +156,7 @@ func (p *DeterministicProvider) CurrentGlobalState(ctx context.Context) (feature
 	return bundle.global, nil
 }
 
-func (p *DeterministicProvider) CurrentSymbolState(ctx context.Context, symbol string) (SymbolStateResponse, error) {
+func (p *currentStateProvider) CurrentSymbolState(ctx context.Context, symbol string) (SymbolStateResponse, error) {
 	bundle, err := p.currentStateBundle(ctx)
 	if err != nil {
 		return SymbolStateResponse{}, err
@@ -98,8 +168,8 @@ func (p *DeterministicProvider) CurrentSymbolState(ctx context.Context, symbol s
 	return response, nil
 }
 
-func (p *DeterministicProvider) currentStateBundle(ctx context.Context) (currentStateBundle, error) {
-	if p == nil {
+func (p *currentStateProvider) currentStateBundle(ctx context.Context) (currentStateBundle, error) {
+	if p == nil || p.source == nil {
 		return currentStateBundle{}, fmt.Errorf("provider is required")
 	}
 	select {
@@ -107,8 +177,12 @@ func (p *DeterministicProvider) currentStateBundle(ctx context.Context) (current
 		return currentStateBundle{}, ctx.Err()
 	default:
 	}
+	return p.source.Bundle(ctx, p.clock().UTC().Truncate(time.Second))
+}
 
-	now := p.clock().UTC().Truncate(time.Second)
+type deterministicSource struct{}
+
+func (deterministicSource) Bundle(ctx context.Context, now time.Time) (currentStateBundle, error) {
 	slowService, err := seededSlowContextService(now)
 	if err != nil {
 		return currentStateBundle{}, err
@@ -146,7 +220,6 @@ func (p *DeterministicProvider) currentStateBundle(ctx context.Context) (current
 			"ETH-USD": eth,
 		},
 	}, nil
-
 }
 
 func (h *Handler) handleHealth(w http.ResponseWriter, r *http.Request) {

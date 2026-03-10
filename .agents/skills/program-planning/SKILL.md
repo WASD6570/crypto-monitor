@@ -92,6 +92,7 @@ Each slice should have:
 - a reason it should be planned independently
 
 Do not over-split into trivial fragments. Do not keep unrelated work bundled together.
+Do not create initiative or epic slices whose only deliverable is smoke or integration validation; keep that work as direct validation attached to the owning implementation slice.
 
 ### 4) Identify cross-cutting tracks explicitly
 

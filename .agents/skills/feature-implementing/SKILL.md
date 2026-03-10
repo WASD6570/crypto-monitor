@@ -126,6 +126,11 @@ At the end of each step, capture in the handoff summary:
   - required env vars/credentials
   - expected side effects, artifacts, persisted state, and parity/replay checks to verify
 
+### 8) Completion archive (required)
+- When the full active feature plan is implemented and its planned validation passes, move the plan directory from `plans/{feature_name}/` to `plans/completed/{feature_name}/` before closing the work.
+- Keep partially implemented or blocked work in `plans/{feature_name}/`; archive only after the feature is actually done.
+- Treat the archive move as part of the done criteria and mention it in the handoff summary.
+
 ## Required conventions
 
 - Start from the beginning unless repository state or current handoff context says otherwise.
@@ -133,6 +138,7 @@ At the end of each step, capture in the handoff summary:
 - Keep the built-in task checklist accurate; it is the execution queue.
 - Keep changes aligned to the monorepo boundaries; shared code goes in `libs/*`, not arbitrary duplication.
 - Preserve deterministic fixtures when touching replay, simulation, or parity-sensitive logic.
+- Do not leave completed active plans under `plans/`; archive them under `plans/completed/` as part of finishing the feature.
 
 ## Recommended step loop
 
@@ -141,8 +147,9 @@ At the end of each step, capture in the handoff summary:
 3. Create / update the built-in task checklist
 4. Implement next unchecked task
 5. Run validation command
-6. Update the current task state and handoff notes
-7. Continue or hand off
+6. Archive the plan to `plans/completed/{feature_name}/` when the feature is fully done
+7. Update the current task state and handoff notes
+8. Continue or hand off
 
 ## Extra guidance for productive execution
 

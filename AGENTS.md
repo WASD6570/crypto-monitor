@@ -80,6 +80,7 @@ Routing rules:
 - Use `feature-planning` when one bounded child feature is identified and needs an implementation-ready plan under `plans/`.
 - Use `feature-implementing` only after a plan exists in `plans/{feature_name}/`.
 - Use `feature-testing` after implementation to run smoke, integration, replay, parity, or side-effect checks.
+- Do not create initiative, epic, or feature plans whose only deliverable is smoke or integration validation; run that validation directly after implementation, preferably against the real external/API boundary when practical.
 - Use `web-design-guidelines` when auditing UI, UX, or accessibility quality against the embedded local guideline set.
 
 Execution order for non-micro feature work:
@@ -94,6 +95,7 @@ Skill interaction rules:
 
 - Keep micro-implementing as the default unless escalation is triggered.
 - If escalated, follow the skill flow above and keep task state and handoff context updated.
+- Smoke-only or integration-only validation is never its own planning slice in this repo; keep it attached to the owning implementation slice or execute it directly via `feature-testing`.
 - For initiative-scale briefs, run `program-planning` first, let it decide whether the work should become one initiative or many, write initiative artifacts under `initiatives/`, then refine the resulting broad slices under `plans/epics/` with `program-refining` before creating active plans under `plans/`.
 - When dependencies allow, use parallel subagents for `program-refining` waves first, then `feature-planning` waves for already-bounded child slices.
 - When implementing a feature from `plans/{feature_name}/`, read the relevant parts of the parent initiative under `initiatives/` and the relevant program docs under `docs/specs/` before editing.
@@ -146,14 +148,14 @@ A micro task must define:
 
 - Outcome: what changes
 - Files: files to touch
-- Command: validation or smoke check
+- Command: validation command
 - Accepts: observable done criteria
 
 If more than one logical change is required, the agent MUST split the work and stop after the first task unless instructed to continue.
 
 If a task touches live ingestion, alerts, risk, replay, simulation, backfills, or shared contracts:
 
-- Command MUST include at least one of: targeted integration test, replay smoke, parity check, deterministic fixture run, or focused end-to-end smoke.
+- Command MUST include at least one of: targeted integration test, direct API/system validation, parity check, deterministic fixture run, or focused end-to-end check.
 - Accepts MUST include idempotency, determinism, or backward-compatibility verification as applicable.
 
 ---
@@ -226,7 +228,7 @@ Each task must be executable without interpretation.
 - [ ] <task title: concrete outcome>
               - Outcome: what changes for the user or system
               - Files: paths or globs to modify
-              - Command: exact command to validate (test, lint, build, smoke)
+              - Command: exact command to validate (test, lint, build, API check)
               - Accepts: observable done criteria
 
 Tasks that cannot be validated must be broken down further.
@@ -260,7 +262,7 @@ Explanations that do not unblock execution are disallowed.
 
 - Every task must specify a validation command.
 - Prefer targeted tests.
-- If no tests exist, add a minimal smoke check.
+- If no tests exist, add the smallest direct validation check that exercises the real boundary when practical.
 - Validation must be runnable by another agent without context.
 
 ---

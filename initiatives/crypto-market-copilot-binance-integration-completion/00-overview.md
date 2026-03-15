@@ -31,9 +31,10 @@ The user should be able to:
 
 ## Current Starting Point
 
-- The earlier `crypto-market-copilot-binance-live-market-data` initiative landed the core Spot/USD-M adapters, raw/replay support, and a first live `market-state-api` cutover.
+- The earlier `crypto-market-copilot-binance-live-market-data` initiative landed the core Spot/USD-M adapters, raw/replay support, and the archived first live `market-state-api` cutover in `plans/completed/binance-live-market-state-api-provider-cutover/`.
 - The current dashboard path already consumes real Binance Spot data through Go.
-- The remaining gap is that `cmd/market-state-api` still uses a bounded on-demand Spot depth snapshot reader, so runtime health, long-lived streaming behavior, and final rollout posture are not finished.
+- The remaining integration gap is that `cmd/market-state-api` still uses a bounded command-local Spot depth snapshot reader instead of a sustained process-owned Spot runtime/read model.
+- That missing runtime integration should be refined before the later observability, USD-M semantics, rollout, and long-run hardening epics.
 
 ## High-Level System Map
 

@@ -8,9 +8,9 @@ compatibility: opencode
 
 - Execute a feature plan produced by `feature-planning`
 - Work strictly in plan order, resuming from last recorded progress
-- Convert each plan step into an explicit built-in task checklist (feature-driving)
+- Convert each plan step into an explicit OpenCode native task checklist (feature-driving)
 - Implement tasks immediately with a tight edit → test → log loop
-- Persist context between agents through accurate task state and clear handoff summaries
+- Persist context between agents through accurate task state, synchronized `plans/STATE.md`, and clear handoff summaries
 
 Repo-specific operating assumptions:
 
@@ -24,18 +24,21 @@ Repo-specific operating assumptions:
 
 Use this after `feature-planning` has produced an active plan in `plans/{feature_name}/`.
 
+Use this only when the user has explicitly asked to continue into implementation. Do not auto-chain into this skill just because refinement or planning finished.
+
 ## How I work
 
 ### 0) Locate plan + load overview (required)
-1. Locate the active plan for the feature name in `plans/{feature_name}/`.
-2. If the feature only exists in `plans/epics/{feature_name}/`, stop and refine it with `program-refining`, then `feature-planning`, before implementing.
-3. If the feature only exists in `plans/completed/{feature_name}/`, treat it as already completed historical context and do not restart implementation unless the user explicitly asks.
-4. Always load `00-overview.md` before any step to understand flow, design, and requirements.
-5. If the active plan came from an epic, load only the relevant refinement docs from `plans/epics/{epic_name}/`.
-6. Load only the relevant initiative docs under `initiatives/{initiative_name}/` when the feature belongs to a larger initiative:
+1. Read `plans/STATE.md` first and confirm the active plan is actually ready to implement, in progress, or the next planned item.
+2. Locate the active plan for the feature name in `plans/{feature_name}/`.
+3. If the feature only exists in `plans/epics/{feature_name}/`, stop and refine it with `program-refining`, then `feature-planning`, before implementing.
+4. If the feature only exists in `plans/completed/{feature_name}/`, treat it as already completed historical context and do not restart implementation unless the user explicitly asks.
+5. Always load `00-overview.md` before any step to understand flow, design, and requirements.
+6. If the active plan came from an epic, load only the relevant refinement docs from `plans/epics/{epic_name}/`.
+7. Load only the relevant initiative docs under `initiatives/{initiative_name}/` when the feature belongs to a larger initiative:
     - at minimum, read the matching initiative `00-overview.md`
     - read the relevant slice entry from the initiative `03-handoff.md`
-7. Load only the relevant program docs under `docs/specs/{program_name}/` when they materially affect the feature:
+8. Load only the relevant program docs under `docs/specs/{program_name}/` when they materially affect the feature:
    - success metrics
    - operating defaults
    - handoff or ordering constraints
@@ -48,16 +51,18 @@ Use this after `feature-planning` has produced an active plan in `plans/{feature
 ### 1) Determine starting point (required)
 - Resume from the last completed step you can verify from repository state and current handoff context.
 - Otherwise start at the first step file (`01-*.md`).
+- Mark the feature `in_progress` in `plans/STATE.md` as soon as execution actually starts.
 
 ### 1.1) Task relevance check (required)
-- Use the built-in task tracker as the execution queue for the active session.
+- Use the OpenCode native task tracker as the execution queue for the active session.
 - `plans/epics/{feature_name}/` is broad context only and must be refined before execution.
 - `plans/{feature_name}/` files are durable active plan artifacts, not required execution checklists.
 - `plans/completed/{feature_name}/` is read-only history for prerequisite context and prior testing evidence.
+- `plans/STATE.md` is the durable quick-look state layer for active, blocked, ready-for-testing, and archived plan status.
 
 ### 2) Feature-driving: create / maintain task queue (required)
 For the current step file:
-- Create or update the built-in task checklist as concrete, executable tasks derived from the step.
+- Create or update the OpenCode native task checklist as concrete, executable tasks derived from the step.
 - The task tracker is the execution source of truth for the step.
 
 Each task must include:
@@ -90,7 +95,7 @@ Task format:
 
 ### 5) Task execution loop (required)
 Repeat until all tasks for the step are complete:
-1. Pick the next unchecked task in the built-in task tracker
+1. Pick the next unchecked task in the OpenCode native task tracker
 2. Implement only what that task requires (small, reviewable edits)
 3. Run the task’s Command
 4. If it fails:
@@ -118,7 +123,7 @@ At the end of each step, capture in the handoff summary:
 - Current state of work
 - Key files changed
 - Next step to run
-- Next unchecked task in the built-in task tracker
+- Next unchecked task in the OpenCode native task tracker
 - Any blockers or decisions needed
 - Any assumptions made
 - Test handoff block (when implementation step is complete):
@@ -126,34 +131,51 @@ At the end of each step, capture in the handoff summary:
   - required env vars/credentials
   - expected side effects, artifacts, persisted state, and parity/replay checks to verify
 
-### 8) Completion archive (required)
-- When the full active feature plan is implemented and its planned validation passes, move the plan directory from `plans/{feature_name}/` to `plans/completed/{feature_name}/` before closing the work.
-- Keep partially implemented or blocked work in `plans/{feature_name}/`; archive only after the feature is actually done.
-- Treat the archive move as part of the done criteria and mention it in the handoff summary.
+Also update `plans/STATE.md` whenever step completion changes:
+
+- current feature status (`in_progress`, `blocked`, `ready_for_testing`, or `archived`)
+- next recommended step for the feature or initiative
+- any new blocker text
+- any change to what can proceed in parallel
+
+### 7.1) Mandatory review handoff (required)
+- After any code-changing implementation pass, launch the required fresh-context reviewer pass before considering the feature ready for testing or closure.
+- Always run `code-reviewer`; add any required specialist reviewer based on the touched surface.
+- Include the core intent set in the reviewer artifact bundle: the user request, active plan step, changed files or diff summary, and relevant repo context. Validation commands/results and touched tests/fixtures are supporting evidence.
+- If findings are clear from the request, plan, diff, and repo context, fix them before handoff instead of deferring them.
+- Ask for clarification only when reviewer findings expose missing or conflicting intent that cannot be resolved safely from the request, plan, diff, and repo context.
+- After fixing reviewer findings, rerun the touched validation commands and rerun the same fresh-context reviewer pass when the diff changed materially.
+
+### 8) Completion handoff (required)
+- This skill does not own final archive/finalization. Leave completed implementation in `plans/{feature_name}/` and mark it `ready_for_testing` in `plans/STATE.md`.
+- Keep partially implemented or blocked work in `plans/{feature_name}/` until `feature-testing` either archives the feature or records a blocker.
+- Treat a clean `ready_for_testing` handoff as the completion boundary for this skill.
 
 ## Required conventions
 
 - Start from the beginning unless repository state or current handoff context says otherwise.
 - Always use a clear handoff summary when pausing.
-- Keep the built-in task checklist accurate; it is the execution queue.
+- Keep the OpenCode native task checklist accurate; it is the execution queue.
 - Keep changes aligned to the monorepo boundaries; shared code goes in `libs/*`, not arbitrary duplication.
 - Preserve deterministic fixtures when touching replay, simulation, or parity-sensitive logic.
-- Do not leave completed active plans under `plans/`; archive them under `plans/completed/` as part of finishing the feature.
+- Do not archive a feature from this skill; `feature-testing` owns the final archive step after a passing validation matrix.
+- Do not leave `plans/STATE.md` stale; implementation progress is not complete until durable state is synchronized.
 
 ## Recommended step loop
 
 1. Read `00-overview.md`
 2. Read current step file
-3. Create / update the built-in task checklist
+3. Create / update the OpenCode native task checklist
 4. Implement next unchecked task
 5. Run validation command
-6. Archive the plan to `plans/completed/{feature_name}/` when the feature is fully done
+6. Mark the feature `ready_for_testing` in `plans/STATE.md` when implementation is complete
 7. Update the current task state and handoff notes
-8. Continue or hand off
+8. Hand off to `feature-testing` or continue only if the user explicitly asked for that next phase
 
 ## Extra guidance for productive execution
 
 - Prefer small, reviewable edits per task.
 - Code > prose.
 - If blocked, log the blocker precisely and stop.
-- Done means: implemented, validated, logged.
+- Review feedback with clear intent should be resolved in the same implementation flow, not deferred.
+- Done means: implemented, validated, reviewed, logged.

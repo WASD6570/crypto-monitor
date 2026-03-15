@@ -154,7 +154,7 @@ func integrationRetentionManifest(t *testing.T, record ingestion.RawPartitionMan
 func integrationRetentionRecord(state ingestion.RawStorageState, location string) ingestion.RawPartitionManifestRecord {
 	return ingestion.RawPartitionManifestRecord{
 		SchemaVersion:         "v1",
-		LogicalPartition:      ingestion.RawPartitionKey{UTCDate: "2026-03-06", Symbol: "BTC-USD", Venue: ingestion.VenueCoinbase, StreamFamily: "trades"},
+		LogicalPartition:      integrationTradeManifestPartitionKey(),
 		StorageState:          state,
 		Location:              location,
 		HotRetentionUntil:     "2026-04-05T00:00:00Z",
@@ -200,7 +200,7 @@ func integrationRetentionEntry(bucketTimestamp string, sequence int64, sourceID 
 		SessionRef:             "session-1",
 		BuildVersion:           "test",
 		DuplicateAudit:         ingestion.RawDuplicateAudit{IdentityKey: sourceID, Occurrence: 1},
-		PartitionKey:           ingestion.RawPartitionKey{UTCDate: "2026-03-06", Symbol: "BTC-USD", Venue: ingestion.VenueCoinbase, StreamFamily: "trades"},
+		PartitionKey:           ingestion.RouteRawPartition(ingestion.RawAppendEntry{BucketTimestamp: bucketTimestamp, Symbol: "BTC-USD", Venue: ingestion.VenueCoinbase, StreamFamily: string(ingestion.StreamTrades)}),
 	}
 }
 

@@ -13,12 +13,7 @@ import (
 func TestReplayManifestUsesResolvedRawPartitionRefs(t *testing.T) {
 	records := []ingestion.RawPartitionManifestRecord{{
 		SchemaVersion: "v1",
-		LogicalPartition: ingestion.RawPartitionKey{
-			UTCDate:      "2026-03-06",
-			Symbol:       "BTC-USD",
-			Venue:        ingestion.VenueCoinbase,
-			StreamFamily: "trades",
-		},
+		LogicalPartition: integrationTradeManifestPartitionKey(),
 		StorageState:          ingestion.RawStorageStateHot,
 		Location:              "hot://raw/BTC-USD/2026-03-06/trades",
 		HotRetentionUntil:     "2026-04-05T00:00:00Z",
@@ -62,12 +57,7 @@ func TestReplayManifestUsesResolvedRawPartitionRefs(t *testing.T) {
 func TestReplayOneSymbolOneDayDeterministicManifestExecution(t *testing.T) {
 	records := []ingestion.RawPartitionManifestRecord{{
 		SchemaVersion: "v1",
-		LogicalPartition: ingestion.RawPartitionKey{
-			UTCDate:      "2026-03-06",
-			Symbol:       "BTC-USD",
-			Venue:        ingestion.VenueCoinbase,
-			StreamFamily: "trades",
-		},
+		LogicalPartition: integrationTradeManifestPartitionKey(),
 		StorageState:          ingestion.RawStorageStateHot,
 		Location:              "hot://raw/BTC-USD/2026-03-06/trades",
 		HotRetentionUntil:     "2026-04-05T00:00:00Z",
@@ -129,12 +119,7 @@ func TestReplayOneSymbolOneDayDeterministicManifestExecution(t *testing.T) {
 func TestBackfillResumeAfterFailure(t *testing.T) {
 	records := []ingestion.RawPartitionManifestRecord{{
 		SchemaVersion: "v1",
-		LogicalPartition: ingestion.RawPartitionKey{
-			UTCDate:      "2026-03-06",
-			Symbol:       "BTC-USD",
-			Venue:        ingestion.VenueCoinbase,
-			StreamFamily: "trades",
-		},
+		LogicalPartition: integrationTradeManifestPartitionKey(),
 		StorageState:          ingestion.RawStorageStateHot,
 		Location:              "hot://raw/BTC-USD/2026-03-06/trades",
 		HotRetentionUntil:     "2026-04-05T00:00:00Z",
@@ -187,7 +172,7 @@ func TestBackfillResumeAfterFailure(t *testing.T) {
 func TestBackfillOverlapConflictHandling(t *testing.T) {
 	reader := &integrationManifestReader{records: []ingestion.RawPartitionManifestRecord{{
 		SchemaVersion:    "v1",
-		LogicalPartition: ingestion.RawPartitionKey{UTCDate: "2026-03-06", Symbol: "BTC-USD", Venue: ingestion.VenueCoinbase, StreamFamily: "trades"},
+		LogicalPartition: integrationTradeManifestPartitionKey(),
 		StorageState:     ingestion.RawStorageStateHot, Location: "hot://raw/BTC-USD/2026-03-06/trades", EntryCount: 1, ContinuityChecksum: "sha256:abc",
 	}}}
 	builder, err := replayengine.NewManifestBuilder(reader, integrationSnapshotLoader{snapshot: replayengine.ConfigSnapshot{Ref: contracts.ReplaySnapshotRef{SchemaVersion: "v1", Kind: "config", ID: "cfg-1", Version: "v1", Digest: "sha256:cfg"}, OrderingPolicyID: "event-time-sequence-canonical-id.v1"}}, contracts.ReplayBuildProvenance{Service: "replay-engine", GitSHA: "deadbeef"})
@@ -214,7 +199,7 @@ func TestBackfillOverlapConflictHandling(t *testing.T) {
 func TestBackfillAuditTrailCompleteness(t *testing.T) {
 	records := []ingestion.RawPartitionManifestRecord{{
 		SchemaVersion:    "v1",
-		LogicalPartition: ingestion.RawPartitionKey{UTCDate: "2026-03-06", Symbol: "BTC-USD", Venue: ingestion.VenueCoinbase, StreamFamily: "trades"},
+		LogicalPartition: integrationTradeManifestPartitionKey(),
 		StorageState:     ingestion.RawStorageStateHot, Location: "hot://raw/BTC-USD/2026-03-06/trades", EntryCount: 1, ContinuityChecksum: "sha256:abc",
 	}}
 	builder, _ := replayengine.NewManifestBuilder(&integrationManifestReader{records: records}, integrationSnapshotLoader{snapshot: replayengine.ConfigSnapshot{Ref: contracts.ReplaySnapshotRef{SchemaVersion: "v1", Kind: "config", ID: "cfg-1", Version: "v1", Digest: "sha256:cfg"}, OrderingPolicyID: "event-time-sequence-canonical-id.v1"}}, contracts.ReplayBuildProvenance{Service: "replay-engine", GitSHA: "deadbeef"})
@@ -238,7 +223,7 @@ func TestBackfillAuditTrailCompleteness(t *testing.T) {
 func TestBackfillApplyGateNegativePaths(t *testing.T) {
 	records := []ingestion.RawPartitionManifestRecord{{
 		SchemaVersion:    "v1",
-		LogicalPartition: ingestion.RawPartitionKey{UTCDate: "2026-03-06", Symbol: "BTC-USD", Venue: ingestion.VenueCoinbase, StreamFamily: "trades"},
+		LogicalPartition: integrationTradeManifestPartitionKey(),
 		StorageState:     ingestion.RawStorageStateHot, Location: "hot://raw/BTC-USD/2026-03-06/trades", EntryCount: 1, ContinuityChecksum: "sha256:abc",
 	}}
 	builder, _ := replayengine.NewManifestBuilder(&integrationManifestReader{records: records}, integrationSnapshotLoader{snapshot: replayengine.ConfigSnapshot{Ref: contracts.ReplaySnapshotRef{SchemaVersion: "v1", Kind: "config", ID: "cfg-1", Version: "v1", Digest: "sha256:cfg"}, OrderingPolicyID: "event-time-sequence-canonical-id.v1"}}, contracts.ReplayBuildProvenance{Service: "replay-engine", GitSHA: "deadbeef"})
@@ -312,13 +297,17 @@ func integrationReplayEntry(bucketTimestamp string, sequence int64, sourceID str
 		SessionRef:             "session-1",
 		BuildVersion:           "test",
 		DuplicateAudit:         ingestion.RawDuplicateAudit{IdentityKey: sourceID, Occurrence: 1},
-		PartitionKey: ingestion.RawPartitionKey{
-			UTCDate:      "2026-03-06",
-			Symbol:       "BTC-USD",
-			Venue:        ingestion.VenueCoinbase,
-			StreamFamily: "trades",
-		},
+		PartitionKey: ingestion.RouteRawPartition(ingestion.RawAppendEntry{BucketTimestamp: bucketTimestamp, Symbol: "BTC-USD", Venue: ingestion.VenueCoinbase, StreamFamily: string(ingestion.StreamTrades)}),
 	}
+}
+
+func integrationTradeManifestPartitionKey() ingestion.RawPartitionKey {
+	return ingestion.RouteRawPartition(ingestion.RawAppendEntry{
+		BucketTimestamp: "2026-03-06T00:00:00Z",
+		Symbol:          "BTC-USD",
+		Venue:           ingestion.VenueCoinbase,
+		StreamFamily:    string(ingestion.StreamTrades),
+	})
 }
 
 func integrationSourceIDs(entries []ingestion.RawAppendEntry) []string {

@@ -10,6 +10,7 @@
 ## Questions That Should Be Answered During Refinement
 
 - whether the streaming runtime should persist a dedicated in-memory read model inside `cmd/market-state-api` or consume a narrower reusable service boundary from `services/venue-binance`
+- whether the sustained Spot runtime integration should own snapshot bootstrap/recovery directly in the command path or only consume a narrower accepted-state seam from `services/venue-binance`
 - whether `/healthz` should remain process-only while richer runtime status lives elsewhere
 - whether `dev` and `prod` should keep the same symbol list and backoff profile as `local` for the first rollout
 - whether USD-M semantic changes require additive API provenance or bucket metadata to stay operator-honest

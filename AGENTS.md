@@ -71,17 +71,39 @@ The following local skills are available under `.agents/skills/` and should be l
 - `feature-implementing`
 - `feature-testing`
 - `web-design-guidelines`
+- `code-reviewer`
+- `go-reviewer`
+- `python-reviewer`
+- `security-reviewer`
+- `database-reviewer`
+
+## Durable Planning State
+
+- `plans/STATE.md` is the authoritative durable source of truth for repo planning and execution state.
+- Before non-micro planning, refinement, implementation, or feature-testing work, read the relevant parts of `plans/STATE.md` first.
+- When initiative, epic seed, active plan, testing, blocker, archive, next-step, or parallelization state changes, update `plans/STATE.md` in the same pass.
+- Use initiative docs, epic docs, feature plans, and testing reports for scope, rationale, and evidence; use `plans/STATE.md` for the quick-look answer to what is active, what is next, what is blocked, and what can run in parallel.
+- Keep the smallest relevant parent planning doc coherent with the state change, usually the relevant initiative `03-handoff.md` and, when needed, the epic handoff/refinement docs.
+- Session execution tasks live only in the OpenCode native task tracker. Do not create durable repo todo/checklist files for session state.
 
 Routing rules:
 
 - Use `frontend-design` for new or updated UI work in `apps/web`, especially dashboards, charts, alert views, and data-heavy screens.
 - Use `program-planning` when a large brief contains multiple initiatives, features, workstreams, or rollout concerns that should be decomposed before epic refinement.
-- Use `program-refining` when work starts from `plans/epics/` or when a broad slice must be decomposed into bounded child features before active planning.
-- Use `feature-planning` when one bounded child feature is identified and needs an implementation-ready plan under `plans/`.
+- Use `program-refining` when work starts from initiative seeds or a broad initiative slice that still needs to be turned into refined epic context under `plans/epics/`.
+- Use `feature-planning` when work starts from refined epic context in `plans/epics/` or when one bounded child feature is already identified and needs an implementation-ready plan under `plans/`.
 - Use `feature-implementing` only after a plan exists in `plans/{feature_name}/`.
 - Use `feature-testing` after implementation to run smoke, integration, replay, parity, or side-effect checks.
 - Do not create initiative, epic, or feature plans whose only deliverable is smoke or integration validation; run that validation directly after implementation, preferably against the real external/API boundary when practical.
 - Use `web-design-guidelines` when auditing UI, UX, or accessibility quality against the embedded local guideline set.
+- Use `code-reviewer` as the default reviewer after every code-changing micro-implementation and after any implementing skill.
+- Add `go-reviewer` when the patch touches Go code or Go-owned live/runtime behavior.
+- Add `python-reviewer` when the patch touches Python research, offline analysis, or parity-sensitive Python code.
+- Add `security-reviewer` when the patch touches auth, secrets, endpoints, user input, webhooks, external integrations, or other security-sensitive flows.
+- Add `database-reviewer` when the patch touches SQL, migrations, persistence layers, query paths, schemas, backfills, or replay-sensitive data handling.
+- Mandatory review dispatch: reviewers MUST run in a newly spawned agent with fresh context; never reuse the implementing agent's context and never resume a prior reviewer session for the same pass.
+- Reviewer intent inputs MUST make the core intent set explicit: user request, current task contract or active plan step, changed diff or file list, and relevant repo context. Overview/testing artifacts, changed tests/fixtures, and validation commands/results are supporting evidence.
+- If the request, plan, diff, and repo context still do not make intent clear, the reviewer agent MUST ask for clarification instead of guessing.
 
 Execution order for non-micro feature work:
 
@@ -89,19 +111,32 @@ Execution order for non-micro feature work:
 2. `program-refining`
 3. `feature-planning`
 4. `feature-implementing`
-5. `feature-testing`
+5. fresh-context reviewer pass (`code-reviewer` plus any relevant specialist reviewers)
+6. `feature-testing`
+
+Approval boundary for that flow:
+
+- `program-refining` and `feature-planning` may be chained in one planning pass when the user is asking to continue planning and has not asked to stop after refinement.
+- Stop after `feature-planning` and keep the user in the loop before `feature-implementing` unless the user explicitly asked to continue into implementation.
 
 Skill interaction rules:
 
 - Keep micro-implementing as the default unless escalation is triggered.
 - If escalated, follow the skill flow above and keep task state and handoff context updated.
+- All planning, implementing, and testing skills must keep `plans/STATE.md` synchronized with the current repo state.
 - Smoke-only or integration-only validation is never its own planning slice in this repo; keep it attached to the owning implementation slice or execute it directly via `feature-testing`.
-- For initiative-scale briefs, run `program-planning` first, let it decide whether the work should become one initiative or many, write initiative artifacts under `initiatives/`, then refine the resulting broad slices under `plans/epics/` with `program-refining` before creating active plans under `plans/`.
+- For initiative-scale briefs, run `program-planning` first, let it decide whether the work should become one initiative or many, write initiative artifacts under `initiatives/`, then use `program-refining` to materialize refined epic context under `plans/epics/` before creating active plans under `plans/`.
+- When a refinement pass identifies an obvious next child feature and the user is still in planning mode, continue directly into `feature-planning` without asking for a separate approval step.
 - When dependencies allow, use parallel subagents for `program-refining` waves first, then `feature-planning` waves for already-bounded child slices.
+- Do not auto-chain from `feature-planning` into `feature-implementing`; pause for explicit user approval before implementation starts.
 - When implementing a feature from `plans/{feature_name}/`, read the relevant parts of the parent initiative under `initiatives/` and the relevant program docs under `docs/specs/` before editing.
 - For frontend-heavy feature work, combine the active feature skill with `frontend-design`.
 - For UI audits, run `web-design-guidelines` using its embedded local rule spec.
 - For replay-sensitive or cross-language work, ensure `feature-testing` covers replay determinism and parity where applicable.
+- After `feature-implementing`, launch the required reviewer agent(s) with fresh context before considering the slice ready for `feature-testing` or handoff.
+- If review findings are clear from the request, plan, diff, and repo context, address them before handoff rather than deferring them.
+- Ask for clarification only when review findings expose genuinely missing or conflicting intent that cannot be resolved from the request, plan, diff, and repo context.
+- If reviewer feedback results in code changes, rerun the touched validation commands and, when appropriate, rerun the same fresh-context reviewer pass on the updated diff.
 
 ---
 
@@ -115,6 +150,7 @@ The default behavior is to:
 
 - implement one small, concrete change,
 - validate it,
+- run the required fresh-context reviewer pass for the change,
 - report,
 - and stop.
 
@@ -168,7 +204,8 @@ For any non-trivial task:
 2. Express it as a concrete task.
 3. Implement immediately.
 4. Run a validation command.
-5. Record state and stop unless instructed otherwise.
+5. Launch the required fresh-context reviewer pass with intent artifacts.
+6. Record state and stop unless instructed otherwise.
 
 No step is considered complete without either:
 
@@ -213,11 +250,12 @@ No step is considered complete without either:
 
 ## Task Tracking
 
-All ongoing work must be represented as an explicit task checklist using the built-in task tracker for the current session.
+All ongoing work must be represented as an explicit task checklist using the OpenCode native task tracker for the current session.
 
-- Keep task state accurate while you work.
-- Use `plans/epics/{epic_name}/` for durable epic refinement artifacts and `plans/{feature_name}/` for active implementation-ready plans, not execution checklists.
-- When pausing, surface blockers, assumptions, and the next recommended step in the handoff message.
+- Keep session task state accurate while you work.
+- Record durable cross-session project state in `plans/STATE.md`, not in repo todo files.
+- Use `plans/epics/{epic_name}/` for durable refined epic context that is ready to feed `feature-planning`, and `plans/{feature_name}/` for active implementation-ready plans, not execution checklists.
+- When pausing, surface blockers, assumptions, the next recommended step, and any needed `plans/STATE.md` updates in the handoff message.
 
 ---
 
@@ -267,6 +305,21 @@ Explanations that do not unblock execution are disallowed.
 
 ---
 
+## Mandatory Fresh-Context Review
+
+- After every micro-implementation that changes code, tests, contracts, queries, migrations, or runtime behavior, spawn a new review agent with fresh context.
+- After every implementing skill execution, including `feature-implementing`, spawn a new review agent with fresh context before closing the work or handing off to the next execution phase.
+- Use a fresh OpenCode subagent/task session for each review pass; do not reuse the implementing agent and do not continue an earlier reviewer task.
+- Always run `code-reviewer`; add `go-reviewer`, `python-reviewer`, `security-reviewer`, and `database-reviewer` when the touched surface matches their domain.
+- Reviewer artifact bundle must be explicit and minimal. The core intent set is: user request, plan or task contract, changed file list or diff summary, and relevant repo context such as `00-overview.md` or equivalent design notes. Testing guidance, touched tests/fixtures, and validation commands/results are supporting evidence.
+- Intent artifacts are part of implementation hygiene. If they are missing, create or update the smallest appropriate artifact before dispatching review. Examples: focused tests, testing notes, active plan overview, task contract, or direct validation evidence.
+- If a reviewer cannot determine intent from the request, plan, diff, and repo context, the reviewer must ask for clarification rather than infer requirements.
+- A review pass is not complete until findings are resolved or a blocking clarification request is surfaced in the task state and handoff.
+- Implementers must treat clear reviewer findings as required follow-up work, not optional suggestions.
+- Only leave a reviewer finding unresolved when the reviewer explicitly asked for clarification or the repo intent remains materially ambiguous after reading the relevant context.
+
+---
+
 ## Hand-off Rules
 
 When pausing or handing off work:
@@ -274,6 +327,7 @@ When pausing or handing off work:
 - Task state reflects reality; checked tasks are truly done.
 - Next task is clearly identified.
 - Validation command for the next task is explicit.
+- Review status is explicit, including which fresh-context reviewer pass ran, what artifacts it used, and any unresolved findings or clarification requests.
 - Any blockers or assumptions are written down in the handoff.
 
 ---
@@ -293,7 +347,7 @@ Absent explicit escalation, micro-implementing remains active.
 Escalation target defaults:
 
 - use `program-planning` when initiative or program boundaries are still unclear
-- use `program-refining` when the work exists only as a broad epic under `plans/epics/`
+- use `program-refining` when the work exists only as a broad initiative seed and has not yet been materialized as refined epic context under `plans/epics/`
 - use `feature-planning` when one bounded child feature is known but lacks an active implementation-ready plan
 
 ---
@@ -316,8 +370,10 @@ Work is done only when:
 
 - code is implemented,
 - validation command passes,
+- required fresh-context review has run with adequate intent artifacts,
+- no blocking reviewer finding or unanswered reviewer clarification request remains,
 - task is checked off,
-- state is recorded for the next agent.
+- durable project state is updated in `plans/STATE.md` and any relevant parent planning doc.
 
 ## Frontend Constraints (Vite SPA)
 

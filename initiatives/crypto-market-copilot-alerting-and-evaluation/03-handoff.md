@@ -1,17 +1,28 @@
 # Alerting And Evaluation Handoff
 
-## Epic Queue
+## Refined Epic Queue
 
-These slices currently live as epics under `plans/epics/` and should be refined into active plans before implementation.
+These slices already exist as refined epic context under `plans/epics/` and are ready for `feature-planning` when this initiative is prioritized.
 
-1. `alert-generation-and-hygiene`
-2. `tactical-risk-state-and-permissioning`
-3. `alert-delivery-and-routing`
-4. `outcome-evaluation`
-5. `simulated-execution`
-6. `operator-feedback-and-notes`
-7. `replay-and-analytics-ui`
-8. `baseline-comparison-and-tuning`
+1. `plans/epics/alert-generation-and-hygiene/`
+2. `plans/epics/tactical-risk-state-and-permissioning/`
+
+## Execution State
+
+- Initiative status: `ready_to_plan`
+- Next recommended epic: `plans/epics/alert-generation-and-hygiene/`
+- Parallel-safe now: `plans/epics/tactical-risk-state-and-permissioning/`
+
+| Epic | Status | Depends On | Parallel With | Next Action | Notes |
+|---|---|---|---|---|---|
+| `plans/epics/alert-generation-and-hygiene/` | `ready_to_plan` | Visibility foundation complete | `plans/epics/tactical-risk-state-and-permissioning/` | Run `feature-planning` | Default Wave 1 epic |
+| `plans/epics/tactical-risk-state-and-permissioning/` | `ready_to_plan` | Visibility foundation complete | `plans/epics/alert-generation-and-hygiene/` | Plan in parallel when capacity allows | Second Wave 1 epic |
+| `plans/epics/alert-delivery-and-routing/` | `blocked` | Wave 1 epic outputs | - | Wait for alert payloads and permissioning posture to settle | Wave 2 epic |
+| `plans/epics/outcome-evaluation/` | `blocked` | Wave 1 epic outputs | - | Wait for alert payloads to settle | Wave 2 epic |
+| `plans/epics/simulated-execution/` | `blocked` | Wave 2 outputs | `plans/epics/operator-feedback-and-notes/` | Wait for alerts and outcomes to settle | Wave 3 epic |
+| `plans/epics/operator-feedback-and-notes/` | `blocked` | Wave 2 outputs | `plans/epics/simulated-execution/` | Wait for alerts and outcomes to settle | Wave 3 epic |
+| `plans/epics/replay-and-analytics-ui/` | `blocked` | Wave 2 and Wave 3 outputs | `plans/epics/baseline-comparison-and-tuning/` | Wait for alert, outcome, and review data to settle | Wave 4 epic |
+| `plans/epics/baseline-comparison-and-tuning/` | `blocked` | Wave 2 and Wave 3 outputs | `plans/epics/replay-and-analytics-ui/` | Wait for alert, outcome, and review data to settle | Wave 4 epic |
 
 ## Planning Waves
 
@@ -39,7 +50,7 @@ These slices currently live as epics under `plans/epics/` and should be refined 
 - `baseline-comparison-and-tuning`
 - Why later: both depend on alert, outcome, and review data being stable enough to inspect and compare.
 
-## Epic Seeds
+## Refined Epics
 
 ### `plans/epics/alert-generation-and-hygiene/`
 

@@ -1,10 +1,10 @@
 # Binance Integration Completion Feature Map
 
-## 1. `binance-streaming-market-state-runtime-cutover`
+## 1. `binance-streaming-market-state-runtime-integration`
 
-- Goal: replace the bounded REST snapshot reader in `cmd/market-state-api` with a long-lived Spot runtime/read-model that continuously feeds current-state assembly.
+- Goal: integrate the already-landed Spot websocket/depth runtime into `cmd/market-state-api` so a sustained process-owned read model continuously feeds current-state assembly.
 - Primary repo areas: `cmd/market-state-api`, `services/venue-binance`, `services/market-state-api`, `tests/integration`
-- Why it stands alone: it is the main gap between the current live cutover and a finished Binance runtime.
+- Why it stands alone: it bridges the archived provider cutover and the later operator-observability work by replacing the temporary command-local snapshot seam with the missing sustained runtime wiring.
 
 ## 2. `binance-runtime-health-and-operator-observability`
 

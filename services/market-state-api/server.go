@@ -1,6 +1,7 @@
 package marketstateapi
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -32,4 +33,14 @@ func (s *Server) ListenAndServe() error {
 		return fmt.Errorf("server is required")
 	}
 	return s.httpServer.ListenAndServe()
+}
+
+func (s *Server) Shutdown(ctx context.Context) error {
+	if s == nil || s.httpServer == nil {
+		return fmt.Errorf("server is required")
+	}
+	if ctx == nil {
+		return fmt.Errorf("shutdown context is required")
+	}
+	return s.httpServer.Shutdown(ctx)
 }

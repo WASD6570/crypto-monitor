@@ -1,25 +1,35 @@
 # Binance Integration Completion Handoff
 
-## Epic Queue
+## Refined Epic Queue
 
-1. `plans/epics/binance-streaming-market-state-runtime-cutover/`
-2. `plans/epics/binance-runtime-health-and-operator-observability/`
-3. `plans/epics/binance-usdm-market-state-influence/`
-4. `plans/epics/binance-environment-config-and-rollout-hardening/`
-5. `plans/epics/binance-long-run-runtime-hardening/`
+No actionable refined epic queue exists yet for Wave 2. The next items are initiative seeds that still need `program-refining` before they can enter `plans/epics/`.
+
+## Execution State
+
+- Initiative status: `in_progress`
+- Completed prerequisite epic context: `plans/epics/binance-streaming-market-state-runtime-integration/` (historical reference only)
+- Next recommended seed: `binance-runtime-health-and-operator-observability`
+- Parallel-safe seed after that starts: `binance-usdm-market-state-influence`
+
+| Item | Status | Depends On | Parallel With | Next Action | Notes |
+|---|---|---|---|---|---|
+| `binance-runtime-health-and-operator-observability` | `ready_to_refine` | Wave 1 complete | `binance-usdm-market-state-influence` | Run `program-refining` and materialize `plans/epics/binance-runtime-health-and-operator-observability/` | First Wave 2 seed and default next planning target |
+| `binance-usdm-market-state-influence` | `ready_to_refine` | Wave 1 complete | `binance-runtime-health-and-operator-observability` | Refine in parallel when capacity allows and materialize `plans/epics/binance-usdm-market-state-influence/` | Second Wave 2 seed |
+| `binance-environment-config-and-rollout-hardening` | `blocked` | Wave 2 decisions | - | Wait for Wave 2 planning and implementation outcomes before refining | Wave 3 seed |
+| `binance-long-run-runtime-hardening` | `blocked` | Wave 2 and Wave 3 outcomes | - | Wait for runtime shape and rollout defaults to settle before refining | Wave 4 seed |
 
 ## Planning Waves
 
 ### Wave 1
 
-- `binance-streaming-market-state-runtime-cutover`
-- Why now: the current remaining gap is the bounded snapshot reader in `cmd/market-state-api`; every later slice should consume the finished runtime source rather than plan against a temporary local seam.
+- `binance-streaming-market-state-runtime-integration`
+- Why now: the archived provider cutover still leaves `cmd/market-state-api` on a bounded snapshot seam; every later slice should consume the finished sustained runtime source rather than plan against a temporary local seam.
 
 ### Wave 2
 
 - `binance-runtime-health-and-operator-observability`
 - `binance-usdm-market-state-influence`
-- Why parallel: both consume the streaming runtime but solve different problems; one is operator visibility, the other is market-state semantics.
+- Why parallel: both consume the sustained runtime integration but solve different problems; one is operator visibility, the other is market-state semantics.
 
 ### Wave 3
 
@@ -31,18 +41,9 @@
 - `binance-long-run-runtime-hardening`
 - Why later: long-run/failure hardening should validate the final runtime shape after the streaming cutover, observability surface, USD-M semantics, and environment defaults are all clear.
 
-## Epic Seeds
+## Initiative Seeds
 
-### `plans/epics/binance-streaming-market-state-runtime-cutover/`
-
-- Problem statement: the dashboard is live-backed today, but `cmd/market-state-api` still reads Binance through a bounded on-demand snapshot seam instead of a sustained streaming runtime.
-- In scope: replace the snapshot reader with a process-owned Spot runtime/read model, wire it into `market-state-api`, preserve warm-up honesty, and keep current routes/contracts stable.
-- Out of scope: USD-M-driven regime changes, broad environment rollout, or frontend redesign.
-- Target repo areas: `cmd/market-state-api`, `services/venue-binance`, `services/market-state-api`, `tests/integration`
-- Contract/fixture/parity/replay implications: current-state payload shape stays stable; replay-sensitive runtime assumptions must stay explicit.
-- Likely validation shape: targeted Go tests, integration checks against the live runtime path, and same-origin API smoke.
-
-### `plans/epics/binance-runtime-health-and-operator-observability/`
+### `binance-runtime-health-and-operator-observability`
 
 - Problem statement: current success/failure states are difficult to interpret because runtime health is mostly implicit and logs are sparse on the happy path.
 - In scope: expose runtime warm-up, reconnect, stale, recovery, and rate-limit state through bounded status surfaces, docs, and operator-facing guidance.
@@ -51,7 +52,7 @@
 - Contract/fixture/parity/replay implications: status outputs must remain machine-readable and should not break existing consumers.
 - Likely validation shape: targeted runtime tests, status endpoint or payload checks, and operator-runbook verification.
 
-### `plans/epics/binance-usdm-market-state-influence/`
+### `binance-usdm-market-state-influence`
 
 - Problem statement: USD-M sensors exist, but it is still unresolved whether they should influence current-state and regime semantics or remain auxiliary context.
 - In scope: settle the product/algorithm role of USD-M inputs, implement the bounded behavior, and preserve deterministic validation.
@@ -60,7 +61,7 @@
 - Contract/fixture/parity/replay implications: highly replay-sensitive; any semantic changes need fixture and deterministic proof updates.
 - Likely validation shape: targeted current-state/regime tests, replay determinism checks, and focused API verification.
 
-### `plans/epics/binance-environment-config-and-rollout-hardening/`
+### `binance-environment-config-and-rollout-hardening`
 
 - Problem statement: the current cutover is local-first, but the final Binance integration needs explicit environment defaults and rollout-safe startup behavior.
 - In scope: define `local`, `dev`, and `prod` runtime defaults, config loading expectations, rollout notes, and startup/health behavior.
@@ -69,7 +70,7 @@
 - Contract/fixture/parity/replay implications: config defaults are rollout-sensitive and should not silently alter replay or current-state semantics.
 - Likely validation shape: config parsing tests, local compose proof, and runbook-driven startup verification.
 
-### `plans/epics/binance-long-run-runtime-hardening/`
+### `binance-long-run-runtime-hardening`
 
 - Problem statement: finishing the integration requires confidence that the final runtime survives reconnects, stale periods, and repeated validation without semantic drift.
 - In scope: long-run/failure-path checks, reconnect/rate-limit/staleness validation, and final replay/current-state regression coverage for the settled runtime.

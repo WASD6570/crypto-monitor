@@ -2,7 +2,7 @@
 
 ## Suggested Order
 
-1. `binance-streaming-market-state-runtime-cutover`
+1. `binance-streaming-market-state-runtime-integration`
 2. `binance-runtime-health-and-operator-observability`
 3. `binance-usdm-market-state-influence`
 4. `binance-environment-config-and-rollout-hardening`
@@ -10,10 +10,10 @@
 
 ## Dependency Notes
 
-### `binance-streaming-market-state-runtime-cutover`
+### `binance-streaming-market-state-runtime-integration`
 
-- Depends on: completed Binance adapter, replay, and current-state assembly work from the prior initiative
-- Unlocks: a real always-on runtime path for market-state queries
+- Depends on: completed Binance adapter, replay, current-state assembly work, and the archived provider cutover in `plans/completed/binance-live-market-state-api-provider-cutover/`
+- Unlocks: the missing sustained Spot runtime/read-model path for market-state queries
 - Risk: high
 
 ### `binance-runtime-health-and-operator-observability`

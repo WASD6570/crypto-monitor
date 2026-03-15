@@ -10,6 +10,7 @@ compatibility: opencode
 - Test endpoint, job, replay, or UI behavior end-to-end for the critical path
 - Verify side effects in the relevant system of record (database, files, fixtures, logs, or generated artifacts)
 - Record reproducible results and clear pass/fail outcomes
+- Keep `plans/STATE.md` synchronized so later agents can see whether the feature is ready for testing, blocked, tested, or archived
 
 ## When to use me
 
@@ -41,14 +42,15 @@ Before execution, determine what this exact test run needs:
 
 ### 1) Load feature context first
 
-1. Read `plans/{feature_name}/00-overview.md`; if the feature has already been archived, read `plans/completed/{feature_name}/00-overview.md` instead. If it exists only under `plans/epics/{epic_name}/`, stop and request refinement first.
-2. Extract the concrete user journeys and endpoint sequence to test.
-3. Use the current handoff context as the primary source for smoke setup when it is available.
+1. Read `plans/STATE.md` first and confirm the feature is in a testable state (`ready_for_testing`, `tested`, or a clearly requested retest pass).
+2. Read `plans/{feature_name}/00-overview.md`; if the feature has already been archived, read `plans/completed/{feature_name}/00-overview.md` instead. If it exists only under `plans/epics/{epic_name}/`, stop and request refinement first.
+3. Extract the concrete user journeys and endpoint sequence to test.
+4. Use the current handoff context as the primary source for smoke setup when it is available.
 
 Context relevance rules:
 
 - Do not read unrelated `plans/{other_feature}`, `plans/epics/{other_epic}`, or `plans/completed/{other_feature}` files.
-- Use built-in task context for current-session execution details rather than repo task files.
+- Use OpenCode native task context for current-session execution details rather than repo task files.
 
 ### 2) Build a minimal smoke matrix
 
@@ -96,6 +98,7 @@ Include:
 - Side-effect verification results (queries, files, fixtures, or other evidence)
 - Failures/blockers
 - Recommended fixes or next checks
+- `plans/STATE.md` status updates made as part of the testing pass
 
 Use this template:
 
@@ -132,6 +135,31 @@ Use this template:
 1. ...
 ```
 
+### 5.1) Sync durable state (required)
+
+After writing or updating the testing report, update `plans/STATE.md` in the same pass.
+
+At minimum:
+
+- mark the feature `tested` when the matrix passes and archive is still pending
+- mark the feature `blocked` when validation failed or prerequisites are missing
+- mark the feature `archived` after the plan moves to `plans/completed/{feature_name}/`
+- update the next recommended action and any blocker text that another agent would need immediately
+
+When the testing pass succeeds against an active feature under `plans/{feature_name}/`, this skill owns the finalization step unless the user explicitly asks to stop first:
+
+- move the plan directory to `plans/completed/{feature_name}/`
+- keep `testing-report.md` with the archived plan directory
+- update `plans/STATE.md` and the smallest relevant parent planning doc in the same pass
+- mention the archive/finalization in the handoff summary
+
+When the testing pass fails or exposes a durable blocker:
+
+- leave the plan active under `plans/{feature_name}/`
+- mark the feature `blocked` in `plans/STATE.md`
+- update the smallest relevant parent planning doc so the next/parallel guidance no longer implies the blocked feature is still the default path
+- capture the blocker and the exact next recommended action in the handoff summary
+
 ## Safety rules (mandatory)
 
 - Prefer read verification first.
@@ -148,3 +176,5 @@ Testing is complete only when:
 - Execution results recorded
 - Side effects verified
 - `testing-report.md` written with clear pass/fail status
+- `plans/STATE.md` updated to reflect `tested`, `blocked`, or `archived` state plus the next recommended action
+- successful active-plan runs are archived to `plans/completed/{feature_name}/` unless the user explicitly asked to pause before finalization

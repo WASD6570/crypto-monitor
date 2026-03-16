@@ -6,16 +6,22 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/crypto-market-copilot/alerts/libs/go/features"
+	"github.com/crypto-market-copilot/alerts/libs/go/ingestion"
 	featureengine "github.com/crypto-market-copilot/alerts/services/feature-engine"
 	regimeengine "github.com/crypto-market-copilot/alerts/services/regime-engine"
 	slowcontext "github.com/crypto-market-copilot/alerts/services/slow-context"
+	venuebinance "github.com/crypto-market-copilot/alerts/services/venue-binance"
 )
 
-var ErrUnsupportedSymbol = errors.New("unsupported symbol")
+var (
+	ErrUnsupportedSymbol        = errors.New("unsupported symbol")
+	ErrRuntimeStatusUnsupported = errors.New("runtime status unsupported by provider")
+)
 
 type SymbolStateResponse struct {
 	features.MarketStateCurrentResponse
@@ -25,6 +31,67 @@ type SymbolStateResponse struct {
 type Provider interface {
 	CurrentGlobalState(ctx context.Context) (features.MarketStateCurrentGlobalResponse, error)
 	CurrentSymbolState(ctx context.Context, symbol string) (SymbolStateResponse, error)
+}
+
+type RuntimeStatusReader interface {
+	RuntimeStatus(ctx context.Context) (RuntimeStatusResponse, error)
+}
+
+type RuntimeStatusReadiness string
+
+const (
+	RuntimeStatusNotReady RuntimeStatusReadiness = "NOT_READY"
+	RuntimeStatusReady    RuntimeStatusReadiness = "READY"
+)
+
+type RuntimeStatusResponse struct {
+	GeneratedAt time.Time                     `json:"generatedAt"`
+	Symbols     []RuntimeStatusSymbolResponse `json:"symbols"`
+}
+
+type RuntimeStatusSymbolResponse struct {
+	Symbol                 string                           `json:"symbol"`
+	SourceSymbol           string                           `json:"sourceSymbol"`
+	QuoteCurrency          string                           `json:"quoteCurrency"`
+	Readiness              RuntimeStatusReadiness           `json:"readiness"`
+	FeedHealth             RuntimeStatusFeedHealthResponse  `json:"feedHealth"`
+	ConnectionState        ingestion.ConnectionState        `json:"connectionState"`
+	LocalClockOffsetMillis int64                            `json:"localClockOffsetMillis"`
+	ConsecutiveReconnects  int                              `json:"consecutiveReconnects"`
+	DepthStatus            RuntimeStatusDepthStatusResponse `json:"depthStatus"`
+	LastAcceptedExchange   *time.Time                       `json:"lastAcceptedExchange"`
+	LastAcceptedRecv       *time.Time                       `json:"lastAcceptedRecv"`
+	LastMessageAt          *time.Time                       `json:"lastMessageAt"`
+	LastSnapshotAt         *time.Time                       `json:"lastSnapshotAt"`
+}
+
+type RuntimeStatusFeedHealthResponse struct {
+	State                 ingestion.FeedHealthState     `json:"state"`
+	ConnectionState       ingestion.ConnectionState     `json:"connectionState"`
+	MessageFreshness      ingestion.FreshnessState      `json:"messageFreshness"`
+	SnapshotFreshness     ingestion.FreshnessState      `json:"snapshotFreshness"`
+	SequenceGapDetected   bool                          `json:"sequenceGapDetected"`
+	ConsecutiveReconnects int                           `json:"consecutiveReconnects"`
+	ResyncCount           int                           `json:"resyncCount"`
+	ClockState            ingestion.ClockState          `json:"clockState"`
+	Reasons               []ingestion.DegradationReason `json:"reasons"`
+}
+
+type RuntimeStatusDepthStatusResponse struct {
+	State                   venuebinance.SpotDepthRecoveryState   `json:"state"`
+	Trigger                 venuebinance.SpotDepthRecoveryTrigger `json:"trigger"`
+	SourceSymbol            string                                `json:"sourceSymbol"`
+	LastAcceptedSequence    int64                                 `json:"lastAcceptedSequence"`
+	BufferedDeltaCount      int                                   `json:"bufferedDeltaCount"`
+	LastMessageAt           *time.Time                            `json:"lastMessageAt"`
+	LastSnapshotAt          *time.Time                            `json:"lastSnapshotAt"`
+	LastRecoveryAttemptAt   *time.Time                            `json:"lastRecoveryAttemptAt"`
+	RemainingCooldownMillis int64                                 `json:"remainingCooldownMillis"`
+	RetryAfterMillis        int64                                 `json:"retryAfterMillis"`
+	ResyncCount             int                                   `json:"resyncCount"`
+	SequenceGapDetected     bool                                  `json:"sequenceGapDetected"`
+	RefreshDue              bool                                  `json:"refreshDue"`
+	Synchronized            bool                                  `json:"synchronized"`
 }
 
 type SlowContextReader interface {
@@ -65,6 +132,8 @@ type currentStateBundle struct {
 	symbols map[string]SymbolStateResponse
 }
 
+var runtimeStatusTrackedSymbols = []string{"BTC-USD", "ETH-USD"}
+
 func NewHandler(provider Provider) (*Handler, error) {
 	if provider == nil {
 		return nil, fmt.Errorf("provider is required")
@@ -75,6 +144,7 @@ func NewHandler(provider Provider) (*Handler, error) {
 func (h *Handler) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", h.handleHealth)
+	mux.HandleFunc("GET /api/runtime-status", h.handleRuntimeStatus)
 	mux.HandleFunc("GET /api/market-state/global", h.handleCurrentGlobalState)
 	mux.HandleFunc("GET /api/market-state/{symbol}", h.handleCurrentSymbolState)
 	return mux
@@ -195,18 +265,47 @@ func (deterministicSource) Bundle(ctx context.Context, now time.Time) (currentSt
 	if err != nil {
 		return currentStateBundle{}, err
 	}
-
-	btc, err := buildSymbolState(featureService, "BTC-USD", now)
+	signalsBySymbol, err := currentStateUSDMInfluenceSignalsFromInput(featureService, deterministicUSDMInfluenceInput(now))
 	if err != nil {
 		return currentStateBundle{}, err
 	}
-	eth, err := buildSymbolState(featureService, "ETH-USD", now)
+
+	btcQuery, btcSlowQuery, err := deterministicSymbolQueries("BTC-USD", now)
+	if err != nil {
+		return currentStateBundle{}, err
+	}
+	btcQuery.SymbolRegime, btcQuery.USDMInfluence, err = features.ApplyUSDMInfluenceToSymbolRegime(btcQuery.SymbolRegime, signalsBySymbol[btcQuery.Symbol])
+	if err != nil {
+		return currentStateBundle{}, err
+	}
+	ethQuery, ethSlowQuery, err := deterministicSymbolQueries("ETH-USD", now)
+	if err != nil {
+		return currentStateBundle{}, err
+	}
+	ethQuery.SymbolRegime, ethQuery.USDMInfluence, err = features.ApplyUSDMInfluenceToSymbolRegime(ethQuery.SymbolRegime, signalsBySymbol[ethQuery.Symbol])
+	if err != nil {
+		return currentStateBundle{}, err
+	}
+	globalRegime, err := features.EvaluateGlobalRegime(deterministicRegimeConfig(), map[string]features.SymbolRegimeSnapshot{
+		btcQuery.Symbol: btcQuery.SymbolRegime,
+		ethQuery.Symbol: ethQuery.SymbolRegime,
+	}, nil)
+	if err != nil {
+		return currentStateBundle{}, err
+	}
+	btcQuery.GlobalRegime = globalRegime
+	ethQuery.GlobalRegime = globalRegime
+	btc, err := buildSymbolStateFromQuery(featureService, btcQuery, btcSlowQuery)
+	if err != nil {
+		return currentStateBundle{}, err
+	}
+	eth, err := buildSymbolStateFromQuery(featureService, ethQuery, ethSlowQuery)
 	if err != nil {
 		return currentStateBundle{}, err
 	}
 	global, err := regimeService.QueryCurrentGlobalState(features.GlobalCurrentStateQuery{
 		AsOf:         now,
-		GlobalRegime: currentGlobalRegime(now),
+		GlobalRegime: globalRegime,
 		Symbols:      []features.MarketStateCurrentResponse{btc.MarketStateCurrentResponse, eth.MarketStateCurrentResponse},
 	})
 	if err != nil {
@@ -225,6 +324,25 @@ func (deterministicSource) Bundle(ctx context.Context, now time.Time) (currentSt
 func (h *Handler) handleHealth(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, healthResponse{Status: "ok"})
 	_ = r
+}
+
+func (h *Handler) handleRuntimeStatus(w http.ResponseWriter, r *http.Request) {
+	reader, ok := h.provider.(RuntimeStatusReader)
+	if !ok {
+		writeError(w, http.StatusNotImplemented, ErrRuntimeStatusUnsupported)
+		return
+	}
+	response, err := reader.RuntimeStatus(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	response, err = normalizeRuntimeStatusResponse(response)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, response)
 }
 
 func (h *Handler) handleCurrentGlobalState(w http.ResponseWriter, r *http.Request) {
@@ -260,6 +378,81 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 
 func writeError(w http.ResponseWriter, status int, err error) {
 	writeJSON(w, status, errorResponse{Error: err.Error()})
+}
+
+func NewRuntimeStatusFeedHealthResponse(status ingestion.FeedHealthStatus) RuntimeStatusFeedHealthResponse {
+	return RuntimeStatusFeedHealthResponse{
+		State:                 status.State,
+		ConnectionState:       status.ConnectionState,
+		MessageFreshness:      status.MessageFreshness,
+		SnapshotFreshness:     status.SnapshotFreshness,
+		SequenceGapDetected:   status.SequenceGapDetected,
+		ConsecutiveReconnects: status.ConsecutiveReconnects,
+		ResyncCount:           status.ResyncCount,
+		ClockState:            status.ClockState,
+		Reasons:               append([]ingestion.DegradationReason{}, status.Reasons...),
+	}
+}
+
+func NewRuntimeStatusDepthStatusResponse(status venuebinance.SpotDepthRecoveryStatus) RuntimeStatusDepthStatusResponse {
+	return RuntimeStatusDepthStatusResponse{
+		State:                   status.State,
+		Trigger:                 status.Trigger,
+		SourceSymbol:            status.SourceSymbol,
+		LastAcceptedSequence:    status.LastAcceptedSequence,
+		BufferedDeltaCount:      status.BufferedDeltaCount,
+		LastMessageAt:           nullableTime(status.LastMessageAt),
+		LastSnapshotAt:          nullableTime(status.LastSnapshotAt),
+		LastRecoveryAttemptAt:   nullableTime(status.LastRecoveryAttemptAt),
+		RemainingCooldownMillis: status.RemainingCooldown.Milliseconds(),
+		RetryAfterMillis:        status.RetryAfter.Milliseconds(),
+		ResyncCount:             status.ResyncCount,
+		SequenceGapDetected:     status.SequenceGapDetected,
+		RefreshDue:              status.RefreshDue,
+		Synchronized:            status.Synchronized,
+	}
+}
+
+func nullableTime(value time.Time) *time.Time {
+	if value.IsZero() {
+		return nil
+	}
+	utc := value.UTC()
+	return &utc
+}
+
+func normalizeRuntimeStatusResponse(response RuntimeStatusResponse) (RuntimeStatusResponse, error) {
+	bySymbol := make(map[string]RuntimeStatusSymbolResponse, len(response.Symbols))
+	for _, symbol := range response.Symbols {
+		if symbol.Symbol == "" {
+			return RuntimeStatusResponse{}, fmt.Errorf("runtime status symbol is required")
+		}
+		if _, exists := bySymbol[symbol.Symbol]; exists {
+			return RuntimeStatusResponse{}, fmt.Errorf("duplicate runtime status symbol: %s", symbol.Symbol)
+		}
+		bySymbol[symbol.Symbol] = symbol
+	}
+
+	normalized := make([]RuntimeStatusSymbolResponse, 0, len(runtimeStatusTrackedSymbols))
+	for _, symbol := range runtimeStatusTrackedSymbols {
+		entry, ok := bySymbol[symbol]
+		if !ok {
+			return RuntimeStatusResponse{}, fmt.Errorf("missing runtime status symbol: %s", symbol)
+		}
+		normalized = append(normalized, entry)
+		delete(bySymbol, symbol)
+	}
+	if len(bySymbol) != 0 {
+		extra := make([]string, 0, len(bySymbol))
+		for symbol := range bySymbol {
+			extra = append(extra, symbol)
+		}
+		sort.Strings(extra)
+		return RuntimeStatusResponse{}, fmt.Errorf("unsupported runtime status symbol: %s", extra[0])
+	}
+
+	response.Symbols = normalized
+	return response, nil
 }
 
 func deterministicCompositeConfig() features.CompositeConfig {
@@ -315,6 +508,10 @@ func buildSymbolState(service *featureengine.Service, symbol string, now time.Ti
 	if err != nil {
 		return SymbolStateResponse{}, err
 	}
+	return buildSymbolStateFromQuery(service, query, slowQuery)
+}
+
+func buildSymbolStateFromQuery(service *featureengine.Service, query features.SymbolCurrentStateQuery, slowQuery slowcontext.AssetQuery) (SymbolStateResponse, error) {
 	response, err := service.QueryCurrentStateWithSlowContext(query, slowQuery)
 	if err != nil {
 		return SymbolStateResponse{}, err

@@ -3,6 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev:docker": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d",
+    "prod:docker": "docker compose up --build -d",
     "test": "node scripts/dev/run_contract_runtime_tests.mjs"
   }
 }

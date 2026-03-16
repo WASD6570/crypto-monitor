@@ -109,6 +109,37 @@ func TestCurrentStateUnavailableSections(t *testing.T) {
 	}
 }
 
+func TestCurrentStateUSDMInfluenceProvenanceIsOptionalAndAdditive(t *testing.T) {
+	response := currentStateResponseFixture(t)
+	if response.Provenance.USDMInfluence != nil {
+		t.Fatalf("expected no usdm provenance by default, got %+v", response.Provenance.USDMInfluence)
+	}
+
+	query := currentStateQueryFixture()
+	query.USDMInfluence = &features.MarketStateCurrentUSDMInfluenceProvenance{
+		Evaluated:        true,
+		Posture:          features.USDMInfluencePostureDegradeCap,
+		PrimaryReason:    features.USDMInfluenceReasonBasisWide,
+		AppliedCap:       true,
+		ObservedAt:       "2026-03-15T12:00:00Z",
+		ConfigVersion:    "feature-engine.binance-usdm-influence.v1",
+		AlgorithmVersion: "binance-usdm-policy.v1",
+	}
+	withProvenance, err := newBucketService(t).QueryCurrentState(query)
+	if err != nil {
+		t.Fatalf("query current state with usdm provenance: %v", err)
+	}
+	if withProvenance.Provenance.USDMInfluence == nil {
+		t.Fatal("expected usdm influence provenance")
+	}
+	if !withProvenance.Provenance.USDMInfluence.AppliedCap {
+		t.Fatalf("expected applied cap provenance, got %+v", withProvenance.Provenance.USDMInfluence)
+	}
+	if withProvenance.Provenance.HistorySeam.ReservedSchemaFamily != "market-state-history-and-audit-reads" {
+		t.Fatalf("history seam changed: %+v", withProvenance.Provenance.HistorySeam)
+	}
+}
+
 func TestCurrentStateSucceedsWhenSlowContextFails(t *testing.T) {
 	service := newBucketServiceWithSlowContext(t, failingSlowContextReader{err: errors.New("slow-context store offline")})
 	baseline := currentStateResponseFixture(t)

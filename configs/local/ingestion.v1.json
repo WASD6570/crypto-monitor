@@ -12,23 +12,23 @@
     "BINANCE": {
       "servicePath": "services/venue-binance",
       "websocket": {
-        "heartbeatTimeoutMs": 10000,
-        "reconnectBackoffMinMs": 500,
-        "reconnectBackoffMaxMs": 5000,
-        "reconnectLoopThreshold": 4,
-        "connectsPerMinuteLimit": 12,
+        "heartbeatTimeoutMs": 15000,
+        "reconnectBackoffMinMs": 1000,
+        "reconnectBackoffMaxMs": 15000,
+        "reconnectLoopThreshold": 3,
+        "connectsPerMinuteLimit": 8,
         "resubscribeOnReconnect": true
       },
       "rest": {
-        "snapshotRecoveryPerMinuteLimit": 30,
-        "snapshotCooldownMs": 1000,
-        "openInterestPollIntervalMs": 5000,
-        "openInterestPollsPerMinuteLimit": 30
+        "snapshotRecoveryPerMinuteLimit": 18,
+        "snapshotCooldownMs": 2000,
+        "openInterestPollIntervalMs": 15000,
+        "openInterestPollsPerMinuteLimit": 18
       },
       "health": {
         "messageStaleAfterMs": 15000,
         "snapshotStaleAfterMs": 30000,
-        "resyncLoopThreshold": 3,
+        "resyncLoopThreshold": 2,
         "clockOffsetWarningMs": 100,
         "clockOffsetDegradedMs": 250
       },
@@ -49,23 +49,23 @@
     "BYBIT": {
       "servicePath": "services/venue-bybit",
       "websocket": {
-        "heartbeatTimeoutMs": 10000,
-        "reconnectBackoffMinMs": 500,
-        "reconnectBackoffMaxMs": 5000,
-        "reconnectLoopThreshold": 4,
-        "connectsPerMinuteLimit": 12,
+        "heartbeatTimeoutMs": 15000,
+        "reconnectBackoffMinMs": 1000,
+        "reconnectBackoffMaxMs": 15000,
+        "reconnectLoopThreshold": 3,
+        "connectsPerMinuteLimit": 8,
         "resubscribeOnReconnect": true
       },
       "rest": {
-        "snapshotRecoveryPerMinuteLimit": 30,
-        "snapshotCooldownMs": 1000,
-        "openInterestPollIntervalMs": 5000,
-        "openInterestPollsPerMinuteLimit": 30
+        "snapshotRecoveryPerMinuteLimit": 18,
+        "snapshotCooldownMs": 2000,
+        "openInterestPollIntervalMs": 15000,
+        "openInterestPollsPerMinuteLimit": 18
       },
       "health": {
         "messageStaleAfterMs": 15000,
         "snapshotStaleAfterMs": 30000,
-        "resyncLoopThreshold": 3,
+        "resyncLoopThreshold": 2,
         "clockOffsetWarningMs": 100,
         "clockOffsetDegradedMs": 250
       },
@@ -86,23 +86,21 @@
     "COINBASE": {
       "servicePath": "services/venue-coinbase",
       "websocket": {
-        "heartbeatTimeoutMs": 12000,
-        "reconnectBackoffMinMs": 500,
-        "reconnectBackoffMaxMs": 5000,
-        "reconnectLoopThreshold": 4,
-        "connectsPerMinuteLimit": 10,
+        "heartbeatTimeoutMs": 18000,
+        "reconnectBackoffMinMs": 1000,
+        "reconnectBackoffMaxMs": 15000,
+        "reconnectLoopThreshold": 3,
+        "connectsPerMinuteLimit": 6,
         "resubscribeOnReconnect": true
       },
       "rest": {
         "snapshotRecoveryPerMinuteLimit": 0,
-        "snapshotCooldownMs": 0,
-        "openInterestPollIntervalMs": 0,
-        "openInterestPollsPerMinuteLimit": 0
+        "snapshotCooldownMs": 0
       },
       "health": {
         "messageStaleAfterMs": 15000,
         "snapshotStaleAfterMs": 60000,
-        "resyncLoopThreshold": 3,
+        "resyncLoopThreshold": 2,
         "clockOffsetWarningMs": 100,
         "clockOffsetDegradedMs": 250
       },
@@ -118,18 +116,16 @@
     "KRAKEN": {
       "servicePath": "services/venue-kraken",
       "websocket": {
-        "heartbeatTimeoutMs": 10000,
-        "reconnectBackoffMinMs": 500,
-        "reconnectBackoffMaxMs": 5000,
-        "reconnectLoopThreshold": 3,
-        "connectsPerMinuteLimit": 8,
+        "heartbeatTimeoutMs": 15000,
+        "reconnectBackoffMinMs": 1000,
+        "reconnectBackoffMaxMs": 15000,
+        "reconnectLoopThreshold": 2,
+        "connectsPerMinuteLimit": 5,
         "resubscribeOnReconnect": true
       },
       "rest": {
-        "snapshotRecoveryPerMinuteLimit": 24,
-        "snapshotCooldownMs": 1500,
-        "openInterestPollIntervalMs": 0,
-        "openInterestPollsPerMinuteLimit": 0
+        "snapshotRecoveryPerMinuteLimit": 16,
+        "snapshotCooldownMs": 2500
       },
       "health": {
         "messageStaleAfterMs": 12000,

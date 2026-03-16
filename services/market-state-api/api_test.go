@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 	"time"
 
@@ -25,8 +26,11 @@ func TestDeterministicProviderCurrentSymbolState(t *testing.T) {
 	if response.Symbol != "BTC-USD" {
 		t.Fatalf("symbol = %q", response.Symbol)
 	}
-	if response.Regime.EffectiveState != features.RegimeStateTradeable {
+	if response.Regime.EffectiveState != features.RegimeStateWatch {
 		t.Fatalf("effective state = %q", response.Regime.EffectiveState)
+	}
+	if response.Provenance.USDMInfluence == nil || !response.Provenance.USDMInfluence.AppliedCap {
+		t.Fatalf("expected applied usdm provenance, got %+v", response.Provenance.USDMInfluence)
 	}
 	if response.SlowContext.Asset != "BTC" {
 		t.Fatalf("slow context asset = %q", response.SlowContext.Asset)
@@ -57,6 +61,9 @@ func TestDeterministicProviderCurrentGlobalState(t *testing.T) {
 	}
 	if response.Symbols[0].Symbol != "BTC-USD" {
 		t.Fatalf("first symbol = %q", response.Symbols[0].Symbol)
+	}
+	if response.Symbols[0].USDMInfluence == nil || !response.Symbols[0].USDMInfluence.AppliedCap {
+		t.Fatalf("expected btc usdm summary in global response, got %+v", response.Symbols[0].USDMInfluence)
 	}
 	if response.Provenance.HistorySeam.ReservedSchemaFamily != "market-state-history-and-audit-reads" {
 		t.Fatalf("history seam = %+v", response.Provenance.HistorySeam)
@@ -92,9 +99,126 @@ func TestHandlerServesCurrentStateRoutes(t *testing.T) {
 		t.Fatalf("slow context asset = %q", symbolResponse.SlowContext.Asset)
 	}
 
-	healthResponse := decodeJSON[healthResponse](t, httpGet(t, server.URL+"/healthz", http.StatusOK))
-	if healthResponse.Status != "ok" {
-		t.Fatalf("health status = %q", healthResponse.Status)
+	healthPayload := decodeJSON[map[string]any](t, httpGet(t, server.URL+"/healthz", http.StatusOK))
+	if len(healthPayload) != 1 {
+		t.Fatalf("health payload keys = %v, want only status", healthPayload)
+	}
+	if status, ok := healthPayload["status"].(string); !ok || status != "ok" {
+		t.Fatalf("health status = %#v", healthPayload["status"])
+	}
+}
+
+func TestHandlerServesRuntimeStatusRoute(t *testing.T) {
+	handler, err := NewHandler(runtimeStatusProviderStub{
+		Provider: fixedProvider(t),
+		response: testRuntimeStatusResponse(),
+	})
+	if err != nil {
+		t.Fatalf("new handler: %v", err)
+	}
+	server := httptest.NewServer(handler.Routes())
+	t.Cleanup(server.Close)
+
+	response := decodeJSON[RuntimeStatusResponse](t, httpGet(t, server.URL+"/api/runtime-status", http.StatusOK))
+	if !response.GeneratedAt.Equal(time.Date(2026, time.March, 15, 12, 0, 0, 0, time.UTC)) {
+		t.Fatalf("generated at = %s", response.GeneratedAt)
+	}
+	if len(response.Symbols) != 2 {
+		t.Fatalf("symbol count = %d", len(response.Symbols))
+	}
+	if response.Symbols[0].Symbol != "BTC-USD" || response.Symbols[1].Symbol != "ETH-USD" {
+		t.Fatalf("symbol order = [%s %s], want [BTC-USD ETH-USD]", response.Symbols[0].Symbol, response.Symbols[1].Symbol)
+	}
+	if response.Symbols[0].Readiness != RuntimeStatusReady {
+		t.Fatalf("btc readiness = %q", response.Symbols[0].Readiness)
+	}
+	if response.Symbols[0].FeedHealth.State != ingestion.FeedHealthDegraded {
+		t.Fatalf("btc feed health state = %q", response.Symbols[0].FeedHealth.State)
+	}
+	if !reflect.DeepEqual(response.Symbols[0].FeedHealth.Reasons, []ingestion.DegradationReason{ingestion.ReasonConnectionNotReady, ingestion.ReasonRateLimit}) {
+		t.Fatalf("btc reasons = %v", response.Symbols[0].FeedHealth.Reasons)
+	}
+	if response.Symbols[0].LocalClockOffsetMillis != 250 {
+		t.Fatalf("btc local clock offset millis = %d", response.Symbols[0].LocalClockOffsetMillis)
+	}
+	if response.Symbols[0].DepthStatus.State != venuebinance.SpotDepthRecoveryRateLimitBlocked {
+		t.Fatalf("btc depth state = %q", response.Symbols[0].DepthStatus.State)
+	}
+	if response.Symbols[0].DepthStatus.RetryAfterMillis != 5000 {
+		t.Fatalf("btc retry after millis = %d", response.Symbols[0].DepthStatus.RetryAfterMillis)
+	}
+	if response.Symbols[1].Readiness != RuntimeStatusNotReady {
+		t.Fatalf("eth readiness = %q", response.Symbols[1].Readiness)
+	}
+	if response.Symbols[1].LastAcceptedExchange != nil {
+		t.Fatalf("eth last accepted exchange = %v, want nil", response.Symbols[1].LastAcceptedExchange)
+	}
+}
+
+func TestHandlerReturnsNotImplementedForUnsupportedRuntimeStatusProvider(t *testing.T) {
+	handler, err := NewHandler(fixedProvider(t))
+	if err != nil {
+		t.Fatalf("new handler: %v", err)
+	}
+	server := httptest.NewServer(handler.Routes())
+	t.Cleanup(server.Close)
+
+	response := decodeJSON[errorResponse](t, httpGet(t, server.URL+"/api/runtime-status", http.StatusNotImplemented))
+	if response.Error != ErrRuntimeStatusUnsupported.Error() {
+		t.Fatalf("error = %q", response.Error)
+	}
+}
+
+func TestHandlerRejectsInvalidRuntimeStatusPayload(t *testing.T) {
+	invalid := testRuntimeStatusResponse()
+	invalid.Symbols = append(invalid.Symbols, RuntimeStatusSymbolResponse{Symbol: "SOL-USD"})
+
+	handler, err := NewHandler(runtimeStatusProviderStub{Provider: fixedProvider(t), response: invalid})
+	if err != nil {
+		t.Fatalf("new handler: %v", err)
+	}
+	server := httptest.NewServer(handler.Routes())
+	t.Cleanup(server.Close)
+
+	response := decodeJSON[errorResponse](t, httpGet(t, server.URL+"/api/runtime-status", http.StatusInternalServerError))
+	if response.Error != "unsupported runtime status symbol: SOL-USD" {
+		t.Fatalf("error = %q", response.Error)
+	}
+}
+
+func TestHandlerServesHealthyRuntimeStatusReasonsAsEmptyList(t *testing.T) {
+	healthy := testRuntimeStatusResponse()
+	healthy.Symbols[1].FeedHealth = NewRuntimeStatusFeedHealthResponse(ingestion.FeedHealthStatus{
+		State:             ingestion.FeedHealthHealthy,
+		ConnectionState:   ingestion.ConnectionConnected,
+		MessageFreshness:  ingestion.FreshnessFresh,
+		SnapshotFreshness: ingestion.FreshnessFresh,
+		ClockState:        ingestion.ClockNormal,
+	})
+
+	handler, err := NewHandler(runtimeStatusProviderStub{Provider: fixedProvider(t), response: healthy})
+	if err != nil {
+		t.Fatalf("new handler: %v", err)
+	}
+	server := httptest.NewServer(handler.Routes())
+	t.Cleanup(server.Close)
+
+	payload := decodeJSON[map[string]any](t, httpGet(t, server.URL+"/api/runtime-status", http.StatusOK))
+	symbols, ok := payload["symbols"].([]any)
+	if !ok || len(symbols) != 2 {
+		t.Fatalf("symbols payload = %#v", payload["symbols"])
+	}
+	first, ok := symbols[0].(map[string]any)
+	if !ok {
+		t.Fatalf("first symbol payload = %#v", symbols[0])
+	}
+	feedHealth, ok := first["feedHealth"].(map[string]any)
+	if !ok {
+		t.Fatalf("feed health payload = %#v", first["feedHealth"])
+	}
+	reasons, ok := feedHealth["reasons"].([]any)
+	if !ok || len(reasons) != 0 {
+		t.Fatalf("healthy reasons payload = %#v", feedHealth["reasons"])
 	}
 }
 
@@ -138,6 +262,9 @@ func TestDeterministicProviderUsesFeatureAssemblySurface(t *testing.T) {
 	}
 	if response.Regime.Symbol.State != features.RegimeStateWatch {
 		t.Fatalf("symbol state = %q", response.Regime.Symbol.State)
+	}
+	if response.Provenance.USDMInfluence == nil || response.Provenance.USDMInfluence.AppliedCap {
+		t.Fatalf("expected auxiliary usdm provenance, got %+v", response.Provenance.USDMInfluence)
 	}
 	entry, ok := response.SlowContext.Context(slowcontext.MetricFamilyETFDailyFlow)
 	if !ok {
@@ -260,6 +387,26 @@ func TestLiveSpotProviderReflectsDepthDegradation(t *testing.T) {
 	}
 }
 
+func TestLiveSpotProviderFallsBackWhenUSDMReaderFails(t *testing.T) {
+	provider := fixedLiveProvider(t, staticUSDMReader{
+		staticSpotReader: staticSpotReader{snapshot: testSpotSnapshot()},
+		usdmErr:         errors.New("usdm unavailable"),
+	})
+	response, err := provider.CurrentSymbolState(context.Background(), "BTC-USD")
+	if err != nil {
+		t.Fatalf("current symbol state: %v", err)
+	}
+	if response.Symbol != "BTC-USD" {
+		t.Fatalf("symbol = %q", response.Symbol)
+	}
+	if response.Provenance.USDMInfluence != nil {
+		t.Fatalf("expected no usdm provenance on reader failure, got %+v", response.Provenance.USDMInfluence)
+	}
+	if response.Regime.Symbol.State == "" {
+		t.Fatalf("expected spot-derived state to remain available: %+v", response.Regime.Symbol)
+	}
+}
+
 type failingProvider struct {
 	err error
 }
@@ -270,6 +417,19 @@ func (f failingProvider) CurrentGlobalState(context.Context) (features.MarketSta
 
 func (f failingProvider) CurrentSymbolState(context.Context, string) (SymbolStateResponse, error) {
 	return SymbolStateResponse{}, f.err
+}
+
+type runtimeStatusProviderStub struct {
+	Provider
+	response RuntimeStatusResponse
+	err      error
+}
+
+func (s runtimeStatusProviderStub) RuntimeStatus(context.Context) (RuntimeStatusResponse, error) {
+	if s.err != nil {
+		return RuntimeStatusResponse{}, s.err
+	}
+	return s.response, nil
 }
 
 func fixedProvider(t *testing.T) *DeterministicProvider {
@@ -306,6 +466,19 @@ func (s staticSpotReader) Snapshot(context.Context, time.Time) (SpotCurrentState
 	return s.snapshot, nil
 }
 
+type staticUSDMReader struct {
+	staticSpotReader
+	usdmInput features.USDMInfluenceEvaluatorInput
+	usdmErr   error
+}
+
+func (s staticUSDMReader) SnapshotUSDMInfluenceInput(context.Context, time.Time) (features.USDMInfluenceEvaluatorInput, error) {
+	if s.usdmErr != nil {
+		return features.USDMInfluenceEvaluatorInput{}, s.usdmErr
+	}
+	return s.usdmInput, nil
+}
+
 func testSpotSnapshot() SpotCurrentStateSnapshot {
 	start := time.Date(2026, time.March, 8, 23, 30, 0, 0, time.UTC)
 	return SpotCurrentStateSnapshot{
@@ -313,6 +486,61 @@ func testSpotSnapshot() SpotCurrentStateSnapshot {
 			spotObservationSeries("BTC-USD", "BTCUSDT", 64000, start),
 			spotObservationSeries("ETH-USD", "ETHUSDT", 3200, start)...,
 		),
+	}
+}
+
+func testRuntimeStatusResponse() RuntimeStatusResponse {
+	generatedAt := time.Date(2026, time.March, 15, 12, 0, 0, 0, time.UTC)
+	btcLastAccepted := generatedAt.Add(-2 * time.Second)
+	btcLastMessage := generatedAt.Add(-1500 * time.Millisecond)
+	btcLastSnapshot := generatedAt.Add(-4 * time.Second)
+	btcLastRecovery := generatedAt.Add(-6 * time.Second)
+
+	return RuntimeStatusResponse{
+		GeneratedAt: generatedAt,
+		Symbols: []RuntimeStatusSymbolResponse{
+			{
+				Symbol:                 "ETH-USD",
+				SourceSymbol:           "ETHUSDT",
+				QuoteCurrency:          "USDT",
+				Readiness:              RuntimeStatusNotReady,
+				FeedHealth:             NewRuntimeStatusFeedHealthResponse(ingestion.FeedHealthStatus{State: ingestion.FeedHealthDegraded, ConnectionState: ingestion.ConnectionConnecting, MessageFreshness: ingestion.FreshnessUnknown, SnapshotFreshness: ingestion.FreshnessUnknown, ClockState: ingestion.ClockNormal, Reasons: []ingestion.DegradationReason{ingestion.ReasonConnectionNotReady}}),
+				ConnectionState:        ingestion.ConnectionConnecting,
+				LocalClockOffsetMillis: 0,
+				ConsecutiveReconnects:  0,
+				DepthStatus: NewRuntimeStatusDepthStatusResponse(venuebinance.SpotDepthRecoveryStatus{
+					State:        venuebinance.SpotDepthRecoveryIdle,
+					SourceSymbol: "ETHUSDT",
+				}),
+			},
+			{
+				Symbol:                 "BTC-USD",
+				SourceSymbol:           "BTCUSDT",
+				QuoteCurrency:          "USDT",
+				Readiness:              RuntimeStatusReady,
+				FeedHealth:             NewRuntimeStatusFeedHealthResponse(ingestion.FeedHealthStatus{State: ingestion.FeedHealthDegraded, ConnectionState: ingestion.ConnectionReconnecting, MessageFreshness: ingestion.FreshnessFresh, SnapshotFreshness: ingestion.FreshnessFresh, ConsecutiveReconnects: 3, ClockState: ingestion.ClockWarning, Reasons: []ingestion.DegradationReason{ingestion.ReasonConnectionNotReady, ingestion.ReasonRateLimit}}),
+				ConnectionState:        ingestion.ConnectionReconnecting,
+				LocalClockOffsetMillis: 250,
+				ConsecutiveReconnects:  3,
+				DepthStatus: NewRuntimeStatusDepthStatusResponse(venuebinance.SpotDepthRecoveryStatus{
+					State:                 venuebinance.SpotDepthRecoveryRateLimitBlocked,
+					Trigger:               venuebinance.SpotDepthRecoveryTriggerSequenceGap,
+					SourceSymbol:          "BTCUSDT",
+					LastAcceptedSequence:  1002,
+					BufferedDeltaCount:    2,
+					LastMessageAt:         btcLastMessage,
+					LastSnapshotAt:        btcLastSnapshot,
+					LastRecoveryAttemptAt: btcLastRecovery,
+					RetryAfter:            5 * time.Second,
+					ResyncCount:           1,
+					SequenceGapDetected:   true,
+				}),
+				LastAcceptedExchange: &btcLastAccepted,
+				LastAcceptedRecv:     &btcLastAccepted,
+				LastMessageAt:        &btcLastMessage,
+				LastSnapshotAt:       &btcLastSnapshot,
+			},
+		},
 	}
 }
 

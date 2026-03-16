@@ -21,7 +21,13 @@
     "buckets": { "type": "object" },
     "regime": { "type": "object" },
     "recentContext": { "type": "object" },
-    "provenance": { "type": "object" }
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "usdmInfluence": { "type": "object" }
+      },
+      "additionalProperties": true
+    }
   },
   "additionalProperties": true
 }

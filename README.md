@@ -84,13 +84,21 @@ The shared contract area is intentionally explicit:
 - Program docs live under `docs/specs/`; initiative plans live under `initiatives/`; feature plans live under `plans/`.
 - Later implementation work can fill in concrete code without redesigning the top-level layout.
 
-## Local Docker Startup
+## Compose Startup
 
+- Run `pnpm run prod:like` from the repo root for the default prod-like stack.
 - Run `docker compose up --build` from the repo root.
+- The checked-in Compose stack always starts `market-state-api` with the prod-like config path at `/app/configs/prod/ingestion.v1.json`; there is no separate local/dev/prod startup posture in Compose.
 - Open `http://127.0.0.1:4173/dashboard`.
-- The current Compose stack runs `web` plus a Go-owned `market-state-api` service.
-- The dashboard remains a same-origin consumer of `/api/market-state/*`; the SPA does not call Binance directly or derive market state in the browser.
-- The default `market-state-api` command now starts a sustained Binance Spot runtime owner for `BTC-USD` and `ETH-USD` behind the existing Go API boundary.
-- Local startup may briefly show `Current State Unavailable` until publishable observations arrive; use `Retry current state` to re-read the same-origin API path during warm-up.
-- `/healthz` reflects process health only; market-data warm-up, unavailability, and degradation stay visible in the current-state JSON payloads.
-- The first live cutover remains Spot-driven, so `usa` stays explicit and may be unavailable or partial.
+- The current Compose stack runs `web` plus a Go-owned `market-state-api` service, and `apps/web` stays a same-origin consumer of `/api/*`; the browser does not talk to Binance directly.
+- Use `GET /api/runtime-status` as the operator runtime-health route for fixed `BTC-USD` and `ETH-USD` status; `GET /healthz` stays process health only.
+- `GET /api/market-state/global` and `GET /api/market-state/:symbol` remain consumer read routes and may briefly be unavailable while `/api/runtime-status` still reports `readiness=NOT_READY` during warm-up.
+- Run `make compose-smoke` for the repeatable rollout proof, and use `docs/runbooks/binance-compose-rollout.md` for the full startup and handoff sequence.
+
+## Developer Live Reload
+
+- Keep `docker compose up --build` as the default prod-like reference path.
+- Run `pnpm dev` from the repo root for the isolated developer workflow.
+- For an isolated dev-only workflow with Vite HMR and Go auto-restart, run `docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build`.
+- The dev overlay still uses the real Go-owned live market path and the same checked-in prod-like config profile; it does not enable frontend mocks, fixture-backed runtime reads, or browser-side Binance access.
+- Run `make compose-dev-smoke` to verify the dev overlay serves `/dashboard` through Vite, proxies same-origin `/api/*`, and restarts `market-state-api` after a watched-file touch.

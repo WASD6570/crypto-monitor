@@ -32,3 +32,46 @@
 - Use only shared state names: `HEALTHY`, `DEGRADED`, `STALE`.
 - Use only shared degradation reasons: `connection-not-ready`, `message-stale`, `snapshot-stale`, `sequence-gap`, `reconnect-loop`, `resync-loop`, `rate-limit`, `clock-degraded`.
 - Do not replace these names with ops aliases in logs, alerts, or runbooks.
+
+## Runtime Status Route
+
+- Primary operator route: `GET /api/runtime-status`
+- Symbol scope is fixed to `BTC-USD` and `ETH-USD`.
+- Use `readiness` first to tell warm-up (`NOT_READY`) from a readable-but-degraded runtime (`READY` with `DEGRADED` or `STALE` feed health).
+- Use `feedHealth.state` and `feedHealth.reasons` for the canonical machine-readable posture.
+- Use `connectionState`, `consecutiveReconnects`, `depthStatus`, and the timestamp fields to confirm reconnect, stale, recovery, or rate-limit posture.
+- `GET /healthz` stays process-health only and must not be used as a runtime freshness gate.
+- `GET /api/market-state/global` and `GET /api/market-state/:symbol` remain consumer read surfaces, not the primary operator runtime-health contract.
+
+## Compact Route Example
+
+```json
+{
+  "generatedAt": "2026-03-15T12:00:00Z",
+  "symbols": [
+    {
+      "symbol": "BTC-USD",
+      "readiness": "READY",
+      "feedHealth": {
+        "state": "DEGRADED",
+        "reasons": ["connection-not-ready", "rate-limit"]
+      },
+      "connectionState": "RECONNECTING",
+      "consecutiveReconnects": 3,
+      "depthStatus": {
+        "state": "rate-limit-blocked",
+        "trigger": "sequence-gap"
+      }
+    },
+    {
+      "symbol": "ETH-USD",
+      "readiness": "NOT_READY",
+      "feedHealth": {
+        "state": "DEGRADED",
+        "reasons": ["connection-not-ready"]
+      },
+      "connectionState": "CONNECTING"
+    }
+  ]
+}
+```

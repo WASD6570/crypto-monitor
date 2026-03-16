@@ -1,0 +1,14 @@
+root = "."
+tmp_dir = ".air-tmp"
+
+[build]
+cmd = "go build -o ./.air-tmp/market-state-api ./cmd/market-state-api"
+bin = "./.air-tmp/market-state-api"
+delay = 1000
+exclude_dir = [".air-tmp", ".git", "apps/research", "apps/web", "libs/python", "node_modules", "plans", "tmp"]
+include_ext = ["go", "json"]
+kill_delay = "500ms"
+stop_on_error = true
+
+[log]
+time = false

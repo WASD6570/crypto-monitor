@@ -12,21 +12,23 @@
     "BINANCE": {
       "servicePath": "services/venue-binance",
       "websocket": {
-        "heartbeatTimeoutMs": 12000,
+        "heartbeatTimeoutMs": 15000,
         "reconnectBackoffMinMs": 1000,
-        "reconnectBackoffMaxMs": 10000,
-        "reconnectLoopThreshold": 4,
-        "connectsPerMinuteLimit": 10,
+        "reconnectBackoffMaxMs": 15000,
+        "reconnectLoopThreshold": 3,
+        "connectsPerMinuteLimit": 8,
         "resubscribeOnReconnect": true
       },
       "rest": {
-        "snapshotRecoveryPerMinuteLimit": 24,
-        "snapshotCooldownMs": 1500
+        "snapshotRecoveryPerMinuteLimit": 18,
+        "snapshotCooldownMs": 2000,
+        "openInterestPollIntervalMs": 15000,
+        "openInterestPollsPerMinuteLimit": 18
       },
       "health": {
         "messageStaleAfterMs": 15000,
         "snapshotStaleAfterMs": 30000,
-        "resyncLoopThreshold": 3,
+        "resyncLoopThreshold": 2,
         "clockOffsetWarningMs": 100,
         "clockOffsetDegradedMs": 250
       },
@@ -47,21 +49,23 @@
     "BYBIT": {
       "servicePath": "services/venue-bybit",
       "websocket": {
-        "heartbeatTimeoutMs": 12000,
+        "heartbeatTimeoutMs": 15000,
         "reconnectBackoffMinMs": 1000,
-        "reconnectBackoffMaxMs": 10000,
-        "reconnectLoopThreshold": 4,
-        "connectsPerMinuteLimit": 10,
+        "reconnectBackoffMaxMs": 15000,
+        "reconnectLoopThreshold": 3,
+        "connectsPerMinuteLimit": 8,
         "resubscribeOnReconnect": true
       },
       "rest": {
-        "snapshotRecoveryPerMinuteLimit": 24,
-        "snapshotCooldownMs": 1500
+        "snapshotRecoveryPerMinuteLimit": 18,
+        "snapshotCooldownMs": 2000,
+        "openInterestPollIntervalMs": 15000,
+        "openInterestPollsPerMinuteLimit": 18
       },
       "health": {
         "messageStaleAfterMs": 15000,
         "snapshotStaleAfterMs": 30000,
-        "resyncLoopThreshold": 3,
+        "resyncLoopThreshold": 2,
         "clockOffsetWarningMs": 100,
         "clockOffsetDegradedMs": 250
       },
@@ -82,11 +86,11 @@
     "COINBASE": {
       "servicePath": "services/venue-coinbase",
       "websocket": {
-        "heartbeatTimeoutMs": 15000,
+        "heartbeatTimeoutMs": 18000,
         "reconnectBackoffMinMs": 1000,
-        "reconnectBackoffMaxMs": 10000,
-        "reconnectLoopThreshold": 4,
-        "connectsPerMinuteLimit": 8,
+        "reconnectBackoffMaxMs": 15000,
+        "reconnectLoopThreshold": 3,
+        "connectsPerMinuteLimit": 6,
         "resubscribeOnReconnect": true
       },
       "rest": {
@@ -96,7 +100,7 @@
       "health": {
         "messageStaleAfterMs": 15000,
         "snapshotStaleAfterMs": 60000,
-        "resyncLoopThreshold": 3,
+        "resyncLoopThreshold": 2,
         "clockOffsetWarningMs": 100,
         "clockOffsetDegradedMs": 250
       },
@@ -112,16 +116,16 @@
     "KRAKEN": {
       "servicePath": "services/venue-kraken",
       "websocket": {
-        "heartbeatTimeoutMs": 12000,
+        "heartbeatTimeoutMs": 15000,
         "reconnectBackoffMinMs": 1000,
-        "reconnectBackoffMaxMs": 10000,
-        "reconnectLoopThreshold": 3,
-        "connectsPerMinuteLimit": 6,
+        "reconnectBackoffMaxMs": 15000,
+        "reconnectLoopThreshold": 2,
+        "connectsPerMinuteLimit": 5,
         "resubscribeOnReconnect": true
       },
       "rest": {
-        "snapshotRecoveryPerMinuteLimit": 20,
-        "snapshotCooldownMs": 2000
+        "snapshotRecoveryPerMinuteLimit": 16,
+        "snapshotCooldownMs": 2500
       },
       "health": {
         "messageStaleAfterMs": 12000,

@@ -34,6 +34,7 @@ const (
 	RegimeReasonCoverageLow                RegimeReasonCode = "coverage-low"
 	RegimeReasonTimestampTrustLoss         RegimeReasonCode = "timestamp-trust-loss"
 	RegimeReasonMarketQualityCap           RegimeReasonCode = "market-quality-cap"
+	RegimeReasonUSDMInfluenceCap           RegimeReasonCode = "usdm-influence-cap"
 	RegimeReasonRecoveryPersistencePending RegimeReasonCode = "recovery-persistence-pending"
 	RegimeReasonGlobalSharedNoOperate      RegimeReasonCode = "global-shared-no-operate"
 	RegimeReasonGlobalSharedWatch          RegimeReasonCode = "global-shared-watch"
@@ -375,7 +376,7 @@ func sharedReasons(symbols map[string]SymbolRegimeSnapshot, ordered []string) []
 
 func globalSharedReason(reason RegimeReasonCode) bool {
 	switch reason {
-	case RegimeReasonCompositeUnavailable, RegimeReasonLateWindowIncomplete, RegimeReasonFragmentationSevere, RegimeReasonFragmentationModerate, RegimeReasonCoverageLow, RegimeReasonTimestampTrustLoss, RegimeReasonMarketQualityCap:
+	case RegimeReasonCompositeUnavailable, RegimeReasonLateWindowIncomplete, RegimeReasonFragmentationSevere, RegimeReasonFragmentationModerate, RegimeReasonCoverageLow, RegimeReasonTimestampTrustLoss, RegimeReasonMarketQualityCap, RegimeReasonUSDMInfluenceCap:
 		return true
 	default:
 		return false
@@ -491,8 +492,10 @@ func reasonRank(reason RegimeReasonCode) int {
 		return 8
 	case RegimeReasonMarketQualityCap:
 		return 9
-	case RegimeReasonHealthy:
+	case RegimeReasonUSDMInfluenceCap:
 		return 10
+	case RegimeReasonHealthy:
+		return 11
 	default:
 		return 99
 	}

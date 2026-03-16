@@ -5,6 +5,8 @@ services:
     build:
       context: .
       dockerfile: services/market-state-api/Dockerfile
+    environment:
+      MARKET_STATE_API_CONFIG_PATH: /app/configs/prod/ingestion.v1.json
     expose:
       - "8080"
     healthcheck:

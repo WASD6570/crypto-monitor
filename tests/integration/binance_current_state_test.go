@@ -69,6 +69,26 @@ func TestIngestionBinanceCurrentStateDegradation(t *testing.T) {
 	}
 }
 
+func TestIngestionBinanceCurrentStateAddsUSDMProvenanceWhenAvailable(t *testing.T) {
+	provider := newIntegrationLiveProvider(t, integrationUSDMReader{
+		integrationSpotReader: integrationSpotReader{snapshot: integrationSpotSnapshot()},
+		input:                 integrationUSDMInfluenceInputFixture(),
+	})
+	response, err := provider.CurrentSymbolState(context.Background(), "BTC-USD")
+	if err != nil {
+		t.Fatalf("current symbol state: %v", err)
+	}
+	if response.Provenance.USDMInfluence == nil {
+		t.Fatal("expected usdm provenance")
+	}
+	if response.Provenance.USDMInfluence.AppliedCap {
+		t.Fatalf("expected provenance-only live output, got %+v", response.Provenance.USDMInfluence)
+	}
+	if response.Provenance.USDMInfluence.Posture != features.USDMInfluencePostureAuxiliary {
+		t.Fatalf("posture = %q", response.Provenance.USDMInfluence.Posture)
+	}
+}
+
 type integrationSpotReader struct {
 	snapshot marketstateapi.SpotCurrentStateSnapshot
 	terr     error
@@ -79,6 +99,19 @@ func (s integrationSpotReader) Snapshot(context.Context, time.Time) (marketstate
 		return marketstateapi.SpotCurrentStateSnapshot{}, s.terr
 	}
 	return s.snapshot, nil
+}
+
+type integrationUSDMReader struct {
+	integrationSpotReader
+	input features.USDMInfluenceEvaluatorInput
+	err   error
+}
+
+func (s integrationUSDMReader) SnapshotUSDMInfluenceInput(context.Context, time.Time) (features.USDMInfluenceEvaluatorInput, error) {
+	if s.err != nil {
+		return features.USDMInfluenceEvaluatorInput{}, s.err
+	}
+	return s.input, nil
 }
 
 func newIntegrationLiveProvider(t *testing.T, reader marketstateapi.SpotCurrentStateReader) *marketstateapi.LiveSpotProvider {

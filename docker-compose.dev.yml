@@ -1,0 +1,28 @@
+services:
+  market-state-api:
+    build:
+      context: .
+      dockerfile: services/market-state-api/Dockerfile.dev
+    environment:
+      MARKET_STATE_API_CONFIG_PATH: /workspace/configs/prod/ingestion.v1.json
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - market-state-api-go-build:/root/.cache/go-build
+      - market-state-api-go-mod:/go/pkg/mod
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile.dev
+    environment:
+      VITE_API_PROXY_TARGET: http://market-state-api:8080
+    volumes:
+      - ./apps/web:/app
+      - web-node-modules:/app/node_modules
+      - web-pnpm-store:/pnpm
+
+volumes:
+  market-state-api-go-build:
+  market-state-api-go-mod:
+  web-node-modules:
+  web-pnpm-store:

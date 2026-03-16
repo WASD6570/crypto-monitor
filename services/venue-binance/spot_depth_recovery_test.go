@@ -74,6 +74,61 @@ func TestSpotDepthRecoveryOwnerBlocksRecoveryAtRateLimit(t *testing.T) {
 	}
 }
 
+func TestSpotDepthRecoveryStatusAtRefreshesRateLimitTimers(t *testing.T) {
+	runtime := newBinanceRuntime(t)
+	runtime.config.SnapshotRecoveryPerMinuteLimit = 1
+	owner, err := NewSpotDepthRecoveryOwner(runtime, stubSpotDepthSnapshotFetcher{})
+	if err != nil {
+		t.Fatalf("new recovery owner: %v", err)
+	}
+	if err := owner.StartSynchronized(bootstrapSync(t, 700, 1772798466000, 701, 1772798466100)); err != nil {
+		t.Fatalf("start synchronized: %v", err)
+	}
+	blockedAt := time.UnixMilli(1772798521000).UTC()
+	if err := owner.MarkSequenceGap(SpotRawFrame{
+		RecvTime: blockedAt,
+		Payload:  []byte(`{"e":"depthUpdate","E":1772798521000,"s":"BTCUSDT","U":703,"u":704,"b":[["64020.40","0.95"]],"a":[["64020.70","0.80"]]}`),
+	}); err != nil {
+		t.Fatalf("mark sequence gap: %v", err)
+	}
+
+	status, err := owner.StatusAt(blockedAt.Add(3 * time.Second))
+	if err != nil {
+		t.Fatalf("status at 3s: %v", err)
+	}
+	if status.State != SpotDepthRecoveryRateLimitBlocked {
+		t.Fatalf("state at 3s = %q, want %q", status.State, SpotDepthRecoveryRateLimitBlocked)
+	}
+	if status.RetryAfter != 2*time.Second {
+		t.Fatalf("retry after at 3s = %s, want %s", status.RetryAfter, 2*time.Second)
+	}
+	healthStatus, err := owner.HealthStatus(blockedAt.Add(3*time.Second), ingestion.ConnectionConnected, 0, 0)
+	if err != nil {
+		t.Fatalf("health status at 3s: %v", err)
+	}
+	if !containsDepthRecoveryReason(healthStatus.Reasons, ingestion.ReasonRateLimit) {
+		t.Fatalf("health reasons at 3s = %v, want %q", healthStatus.Reasons, ingestion.ReasonRateLimit)
+	}
+
+	status, err = owner.StatusAt(blockedAt.Add(6 * time.Second))
+	if err != nil {
+		t.Fatalf("status at 6s: %v", err)
+	}
+	if status.State != SpotDepthRecoveryResyncing {
+		t.Fatalf("state at 6s = %q, want %q", status.State, SpotDepthRecoveryResyncing)
+	}
+	if status.RetryAfter != 0 {
+		t.Fatalf("retry after at 6s = %s, want 0", status.RetryAfter)
+	}
+	healthStatus, err = owner.HealthStatus(blockedAt.Add(6*time.Second), ingestion.ConnectionConnected, 0, 0)
+	if err != nil {
+		t.Fatalf("health status at 6s: %v", err)
+	}
+	if containsDepthRecoveryReason(healthStatus.Reasons, ingestion.ReasonRateLimit) {
+		t.Fatalf("health reasons at 6s = %v, did not expect %q", healthStatus.Reasons, ingestion.ReasonRateLimit)
+	}
+}
+
 func TestSpotDepthRecoveryOwnerRecoversWithReplacementSnapshot(t *testing.T) {
 	runtime := newBinanceRuntime(t)
 	owner, err := NewSpotDepthRecoveryOwner(runtime, stubSpotDepthSnapshotFetcher{
@@ -146,6 +201,13 @@ func TestSpotDepthRecoveryOwnerRefreshDueAndSnapshotStaleHealth(t *testing.T) {
 	}
 	if !refreshStatus.Due {
 		t.Fatal("expected snapshot refresh to be due after configured interval")
+	}
+	statusAt, err := owner.StatusAt(time.UnixMilli(1772798820000).UTC())
+	if err != nil {
+		t.Fatalf("status at refresh time: %v", err)
+	}
+	if !statusAt.RefreshDue {
+		t.Fatal("expected status at refresh time to mark refresh due")
 	}
 	feedStatus, err := owner.HealthStatus(time.UnixMilli(1772798851000).UTC(), ingestion.ConnectionConnected, 0, 0)
 	if err != nil {

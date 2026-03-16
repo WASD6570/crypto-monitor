@@ -21,7 +21,9 @@
       },
       "rest": {
         "snapshotRecoveryPerMinuteLimit": 18,
-        "snapshotCooldownMs": 2000
+        "snapshotCooldownMs": 2000,
+        "openInterestPollIntervalMs": 15000,
+        "openInterestPollsPerMinuteLimit": 18
       },
       "health": {
         "messageStaleAfterMs": 15000,
@@ -56,7 +58,9 @@
       },
       "rest": {
         "snapshotRecoveryPerMinuteLimit": 18,
-        "snapshotCooldownMs": 2000
+        "snapshotCooldownMs": 2000,
+        "openInterestPollIntervalMs": 15000,
+        "openInterestPollsPerMinuteLimit": 18
       },
       "health": {
         "messageStaleAfterMs": 15000,

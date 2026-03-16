@@ -14,6 +14,7 @@ type Service struct {
 	bucketConfig    *features.BucketConfig
 	bucketProcessor *features.WorldUSABucketProcessor
 	slowContext     SlowContextReader
+	usdmInfluence   features.USDMInfluenceConfig
 }
 
 type ServiceOption func(*Service) error
@@ -46,15 +47,28 @@ func WithSlowContextReader(reader SlowContextReader) ServiceOption {
 	}
 }
 
+func WithUSDMInfluenceConfig(config features.USDMInfluenceConfig) ServiceOption {
+	return func(service *Service) error {
+		if err := config.Validate(); err != nil {
+			return err
+		}
+		service.usdmInfluence = config
+		return nil
+	}
+}
+
 func NewService(config features.CompositeConfig, options ...ServiceOption) (*Service, error) {
 	if err := config.Validate(); err != nil {
 		return nil, err
 	}
-	service := &Service{config: config}
+	service := &Service{config: config, usdmInfluence: features.DefaultUSDMInfluenceConfig()}
 	for _, option := range options {
 		if err := option(service); err != nil {
 			return nil, err
 		}
+	}
+	if err := service.usdmInfluence.Validate(); err != nil {
+		return nil, err
 	}
 	return service, nil
 }

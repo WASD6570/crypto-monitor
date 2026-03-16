@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -456,11 +457,13 @@ func TestNewProviderWithOptionsUsesRuntimeOwnerStartupState(t *testing.T) {
 	defer wsServer.Close()
 
 	provider, err := newProviderWithOptions(providerOptions{
-		clock:        func() time.Time { return time.Date(2026, time.March, 10, 12, 0, 0, 0, time.UTC) },
-		client:       restServer.Client(),
-		configPath:   testConfigPath(),
-		binanceURL:   restServer.URL,
-		websocketURL: websocketURLForServer(wsServer),
+		clock:            func() time.Time { return time.Date(2026, time.March, 10, 12, 0, 0, 0, time.UTC) },
+		client:           restServer.Client(),
+		configPath:       testConfigPath(),
+		binanceURL:       restServer.URL,
+		websocketURL:     websocketURLForServer(wsServer),
+		binanceUSDMURL:   restServer.URL,
+		usdmWebsocketURL: websocketURLForServer(wsServer),
 	})
 	if err != nil {
 		t.Fatalf("new provider: %v", err)
@@ -492,16 +495,16 @@ func TestNewProviderWithOptionsUsesRuntimeOwnerStartupState(t *testing.T) {
 	if !response.Composite.USA.Unavailable {
 		t.Fatalf("expected usa composite to remain unavailable: %+v", response.Composite.USA)
 	}
-	if requests.Load() != 0 {
-		t.Fatalf("request count = %d, want 0", requests.Load())
+	if requests.Load() > 2 {
+		t.Fatalf("request count = %d, want <= 2", requests.Load())
 	}
 
 	_, err = provider.CurrentSymbolState(context.Background(), "ETH-USD")
 	if err != nil {
 		t.Fatalf("second current symbol state: %v", err)
 	}
-	if requests.Load() != 0 {
-		t.Fatalf("request count after second read = %d, want 0", requests.Load())
+	if requests.Load() > 2 {
+		t.Fatalf("request count after second read = %d, want <= 2", requests.Load())
 	}
 }
 
@@ -518,11 +521,13 @@ func TestNewProviderWithOptionsPassesClockIntoRuntimeOwner(t *testing.T) {
 
 	fixedNow := time.Date(2026, time.March, 10, 12, 34, 56, 0, time.UTC)
 	provider, err := newProviderWithOptions(providerOptions{
-		clock:        func() time.Time { return fixedNow },
-		client:       restServer.Client(),
-		configPath:   testConfigPath(),
-		binanceURL:   restServer.URL,
-		websocketURL: websocketURLForServer(wsServer),
+		clock:            func() time.Time { return fixedNow },
+		client:           restServer.Client(),
+		configPath:       testConfigPath(),
+		binanceURL:       restServer.URL,
+		websocketURL:     websocketURLForServer(wsServer),
+		binanceUSDMURL:   restServer.URL,
+		usdmWebsocketURL: websocketURLForServer(wsServer),
 	})
 	if err != nil {
 		t.Fatalf("new provider: %v", err)
@@ -566,11 +571,13 @@ func TestNewProviderWithOptionsServesCurrentStateRoutes(t *testing.T) {
 	defer wsServer.Close()
 
 	provider, err := newProviderWithOptions(providerOptions{
-		clock:        func() time.Time { return time.Date(2026, time.March, 10, 12, 0, 1, 0, time.UTC) },
-		client:       restServer.Client(),
-		configPath:   testConfigPath(),
-		binanceURL:   restServer.URL,
-		websocketURL: websocketURLForServer(wsServer),
+		clock:            func() time.Time { return time.Date(2026, time.March, 10, 12, 0, 1, 0, time.UTC) },
+		client:           restServer.Client(),
+		configPath:       testConfigPath(),
+		binanceURL:       restServer.URL,
+		websocketURL:     websocketURLForServer(wsServer),
+		binanceUSDMURL:   restServer.URL,
+		usdmWebsocketURL: websocketURLForServer(wsServer),
 	})
 	if err != nil {
 		t.Fatalf("new provider: %v", err)
@@ -623,11 +630,85 @@ func TestNewProviderWithOptionsServesCurrentStateRoutes(t *testing.T) {
 	if unsupported.Error != "unsupported symbol: SOL-USD" {
 		t.Fatalf("unsupported symbol error = %q, want %q", unsupported.Error, "unsupported symbol: SOL-USD")
 	}
-	if requests.Load() != 2 {
-		t.Fatalf("depth snapshot requests = %d, want 2", requests.Load())
+	if requests.Load() != 4 {
+		t.Fatalf("runtime bootstrap requests = %d, want 4", requests.Load())
 	}
 	if _, ok := provider.(*providerWithRuntime); !ok {
 		t.Fatalf("provider type = %T, want *providerWithRuntime", provider)
+	}
+}
+
+func TestNewProviderWithOptionsServesRuntimeStatusDuringWarmup(t *testing.T) {
+	fixedNow := time.Date(2026, time.March, 10, 12, 0, 0, 0, time.UTC)
+	var requests atomic.Int32
+	restServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+		http.Error(w, "unexpected request", http.StatusInternalServerError)
+	}))
+	defer restServer.Close()
+	wsServer := newSpotWebsocketTestServer(t, func(conn *websocket.Conn, command binanceSubscribeCommand) {
+		writeSubscribeAck(t, conn, command.ID)
+		blockUntilSocketClosed(conn)
+	})
+	defer wsServer.Close()
+
+	provider, err := newProviderWithOptions(providerOptions{
+		clock:            func() time.Time { return fixedNow },
+		client:           restServer.Client(),
+		configPath:       testConfigPath(),
+		binanceURL:       restServer.URL,
+		websocketURL:     websocketURLForServer(wsServer),
+		binanceUSDMURL:   restServer.URL,
+		usdmWebsocketURL: websocketURLForServer(wsServer),
+	})
+	if err != nil {
+		t.Fatalf("new provider: %v", err)
+	}
+	closer, ok := provider.(interface{ Close(context.Context) error })
+	if !ok {
+		t.Fatalf("provider type = %T, want closer", provider)
+	}
+	defer func() {
+		if err := closer.Close(context.Background()); err != nil {
+			t.Fatalf("close provider: %v", err)
+		}
+	}()
+
+	handler, err := marketstateapi.NewHandler(provider)
+	if err != nil {
+		t.Fatalf("new handler: %v", err)
+	}
+	server := httptest.NewServer(handler.Routes())
+	defer server.Close()
+
+	runtimeStatus, _ := mustGetJSON[marketstateapi.RuntimeStatusResponse](t, server.URL+"/api/runtime-status", http.StatusOK)
+	if !runtimeStatus.GeneratedAt.Equal(fixedNow) {
+		t.Fatalf("generated at = %s, want %s", runtimeStatus.GeneratedAt, fixedNow)
+	}
+	if len(runtimeStatus.Symbols) != 2 {
+		t.Fatalf("runtime status symbols = %d, want 2", len(runtimeStatus.Symbols))
+	}
+	if runtimeStatus.Symbols[0].Symbol != "BTC-USD" || runtimeStatus.Symbols[1].Symbol != "ETH-USD" {
+		t.Fatalf("runtime status order = [%s %s], want [BTC-USD ETH-USD]", runtimeStatus.Symbols[0].Symbol, runtimeStatus.Symbols[1].Symbol)
+	}
+	for _, symbol := range runtimeStatus.Symbols {
+		if symbol.Readiness != marketstateapi.RuntimeStatusNotReady {
+			t.Fatalf("%s readiness = %q, want %q", symbol.Symbol, symbol.Readiness, marketstateapi.RuntimeStatusNotReady)
+		}
+		if symbol.FeedHealth.State == "" {
+			t.Fatalf("%s feed health state should stay explicit", symbol.Symbol)
+		}
+		if symbol.LastAcceptedExchange != nil || symbol.LastAcceptedRecv != nil {
+			t.Fatalf("%s accepted timestamps should be nil: %+v", symbol.Symbol, symbol)
+		}
+	}
+
+	healthPayload, _ := mustGetJSON[map[string]any](t, server.URL+"/healthz", http.StatusOK)
+	if len(healthPayload) != 1 || healthPayload["status"] != "ok" {
+		t.Fatalf("health payload = %+v, want only status=ok", healthPayload)
+	}
+	if requests.Load() > 2 {
+		t.Fatalf("runtime warmup requests = %d, want <= 2", requests.Load())
 	}
 }
 
@@ -656,11 +737,13 @@ func TestNewProviderWithOptionsReflectsDegradedAPIState(t *testing.T) {
 		_ = conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "bye"), time.Now().Add(time.Second))
 	})
 	provider, err := newProviderWithOptions(providerOptions{
-		clock:        func() time.Time { return time.Now().UTC() },
-		client:       restServer.Client(),
-		configPath:   testConfigPath(),
-		binanceURL:   restServer.URL,
-		websocketURL: websocketURLForServer(wsServer),
+		clock:            func() time.Time { return time.Now().UTC() },
+		client:           restServer.Client(),
+		configPath:       testConfigPath(),
+		binanceURL:       restServer.URL,
+		websocketURL:     websocketURLForServer(wsServer),
+		binanceUSDMURL:   restServer.URL,
+		usdmWebsocketURL: websocketURLForServer(wsServer),
 	})
 	if err != nil {
 		t.Fatalf("new provider: %v", err)
@@ -702,11 +785,32 @@ func TestNewProviderWithOptionsReflectsDegradedAPIState(t *testing.T) {
 	if degraded.Composite.Availability == features.CurrentStateAvailabilityUnavailable {
 		t.Fatalf("expected degraded symbol to remain readable: %+v", degraded.Composite)
 	}
-	if requests.Load() != 2 {
-		t.Fatalf("depth snapshot requests = %d, want 2", requests.Load())
+	if requests.Load() != 4 {
+		t.Fatalf("runtime bootstrap requests = %d, want 4", requests.Load())
 	}
 	if degraded.Regime.Symbol.State == "" {
 		t.Fatalf("expected symbol regime state during degraded response: %+v", degraded.Regime.Symbol)
+	}
+
+	var runtimeStatus marketstateapi.RuntimeStatusResponse
+	waitFor(t, 2*time.Second, func() bool {
+		current, status, err := tryGetJSON[marketstateapi.RuntimeStatusResponse](server.URL + "/api/runtime-status")
+		if err != nil || status != http.StatusOK || len(current.Symbols) != 2 {
+			return false
+		}
+		runtimeStatus = current
+		return current.Symbols[0].Symbol == "BTC-USD" && current.Symbols[0].FeedHealth.State == ingestion.FeedHealthDegraded && hasReason(current.Symbols[0].FeedHealth.Reasons, ingestion.ReasonConnectionNotReady)
+	})
+	if runtimeStatus.Symbols[0].Readiness != marketstateapi.RuntimeStatusReady {
+		t.Fatalf("btc readiness during degradation = %q, want %q", runtimeStatus.Symbols[0].Readiness, marketstateapi.RuntimeStatusReady)
+	}
+	if runtimeStatus.Symbols[0].ConnectionState == ingestion.ConnectionConnected {
+		t.Fatalf("btc connection state should reflect degradation: %+v", runtimeStatus.Symbols[0])
+	}
+
+	healthPayload, _ := mustGetJSON[map[string]any](t, server.URL+"/healthz", http.StatusOK)
+	if len(healthPayload) != 1 || healthPayload["status"] != "ok" {
+		t.Fatalf("health payload during degradation = %+v, want only status=ok", healthPayload)
 	}
 	global, _ := mustGetJSON[features.MarketStateCurrentGlobalResponse](t, server.URL+"/api/market-state/global", http.StatusOK)
 	if len(global.Symbols) != 2 {
@@ -734,6 +838,90 @@ func TestNewProviderWithOptionsRejectsMissingWebsocketURL(t *testing.T) {
 	}
 }
 
+func TestNewProviderWithOptionsLoadsBinanceEnvironmentProfiles(t *testing.T) {
+	fixedNow := time.Date(2026, time.March, 10, 12, 0, 0, 0, time.UTC)
+	restServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/fapi/v1/openInterest" {
+			http.Error(w, "unexpected request", http.StatusInternalServerError)
+			return
+		}
+		symbol := r.URL.Query().Get("symbol")
+		if symbol == "" {
+			http.Error(w, "missing symbol", http.StatusBadRequest)
+			return
+		}
+		_, _ = w.Write([]byte(fmt.Sprintf(`{"symbol":"%s","openInterest":"10659.509","time":1772798404000}`, symbol)))
+	}))
+	defer restServer.Close()
+	wsServer := newSpotWebsocketTestServer(t, func(conn *websocket.Conn, command binanceSubscribeCommand) {
+		writeSubscribeAck(t, conn, command.ID)
+		blockUntilSocketClosed(conn)
+	})
+	defer wsServer.Close()
+
+	for _, environment := range []string{"local", "dev", "prod"} {
+		environment := environment
+		t.Run(environment, func(t *testing.T) {
+			provider, err := newProviderWithOptions(providerOptions{
+				clock:            func() time.Time { return fixedNow },
+				client:           restServer.Client(),
+				configPath:       testEnvironmentConfigPath(environment),
+				binanceURL:       restServer.URL,
+				websocketURL:     websocketURLForServer(wsServer),
+				binanceUSDMURL:   restServer.URL,
+				usdmWebsocketURL: websocketURLForServer(wsServer),
+			})
+			if err != nil {
+				t.Fatalf("new provider: %v", err)
+			}
+			wrapped, ok := provider.(*providerWithRuntime)
+			if !ok {
+				t.Fatalf("provider type = %T, want *providerWithRuntime", provider)
+			}
+			defer func() {
+				if err := wrapped.Close(context.Background()); err != nil {
+					t.Fatalf("close provider: %v", err)
+				}
+			}()
+
+			status, err := wrapped.RuntimeStatus(context.Background())
+			if err != nil {
+				t.Fatalf("runtime status: %v", err)
+			}
+			if !status.GeneratedAt.Equal(fixedNow) {
+				t.Fatalf("generated at = %s, want %s", status.GeneratedAt, fixedNow)
+			}
+			if len(status.Symbols) != 2 {
+				t.Fatalf("runtime status symbols = %d, want 2", len(status.Symbols))
+			}
+			if status.Symbols[0].Symbol != "BTC-USD" || status.Symbols[1].Symbol != "ETH-USD" {
+				t.Fatalf("runtime status order = [%s %s], want [BTC-USD ETH-USD]", status.Symbols[0].Symbol, status.Symbols[1].Symbol)
+			}
+			for _, symbol := range status.Symbols {
+				if symbol.Readiness != marketstateapi.RuntimeStatusNotReady {
+					t.Fatalf("%s readiness = %q, want %q", symbol.Symbol, symbol.Readiness, marketstateapi.RuntimeStatusNotReady)
+				}
+			}
+		})
+	}
+}
+
+func TestNewProviderWithOptionsRejectsSpotOverridesWithoutUSDMOverrides(t *testing.T) {
+	_, err := newProviderWithOptions(providerOptions{
+		clock:        func() time.Time { return time.Now().UTC() },
+		client:       http.DefaultClient,
+		configPath:   testConfigPath(),
+		binanceURL:   "https://example.test",
+		websocketURL: "wss://example.test/ws",
+	})
+	if err == nil {
+		t.Fatal("expected usdm override error")
+	}
+	if !strings.Contains(err.Error(), "binance usdm base url is required") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
 func TestNewProviderWithOptionsRejectsMissingConfig(t *testing.T) {
 	_, err := newProviderWithOptions(providerOptions{
 		clock:        func() time.Time { return time.Now().UTC() },
@@ -744,6 +932,32 @@ func TestNewProviderWithOptionsRejectsMissingConfig(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatalf("expected config error")
+	}
+}
+
+func TestNewProviderWithOptionsRejectsRuntimeStatusSymbolOverrides(t *testing.T) {
+	contents, err := os.ReadFile(testConfigPath())
+	if err != nil {
+		t.Fatalf("read config: %v", err)
+	}
+	rewritten := strings.Replace(string(contents), `"ETH-USD"`, `"SOL-USD"`, 1)
+	configPath := filepath.Join(t.TempDir(), "ingestion.v1.json")
+	if err := os.WriteFile(configPath, []byte(rewritten), 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	_, err = newProviderWithOptions(providerOptions{
+		clock:        func() time.Time { return time.Now().UTC() },
+		client:       http.DefaultClient,
+		configPath:   configPath,
+		binanceURL:   defaultBinanceURL,
+		websocketURL: defaultBinanceWebsocketURL,
+	})
+	if err == nil {
+		t.Fatal("expected runtime-status symbol validation error")
+	}
+	if !strings.Contains(err.Error(), "binance runtime symbols must stay") {
+		t.Fatalf("error = %v", err)
 	}
 }
 
@@ -762,8 +976,12 @@ func TestServerAddressUsesPortEnv(t *testing.T) {
 }
 
 func testConfigPath() string {
+	return testEnvironmentConfigPath("local")
+}
+
+func testEnvironmentConfigPath(environment string) string {
 	_, filename, _, _ := runtime.Caller(0)
-	return filepath.Clean(filepath.Join(filepath.Dir(filename), "..", "..", "configs", "local", "ingestion.v1.json"))
+	return filepath.Clean(filepath.Join(filepath.Dir(filename), "..", "..", "configs", environment, "ingestion.v1.json"))
 }
 
 func testBinanceRuntime(t *testing.T) (ingestion.VenueRuntimeConfig, *venuebinance.Runtime) {

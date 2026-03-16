@@ -7,10 +7,12 @@
 
 ## Quick Triage
 
-1. Record the current feed state: `HEALTHY`, `DEGRADED`, or `STALE`.
-2. Record the emitted degradation reasons exactly as shown.
-3. Check `message_lag_ms`, `snapshot_lag_ms`, `reconnect_count`, `resync_count`, `sequence_gap_count`, `snapshot_recovery_attempts_per_minute`, `rest_poll_attempts_per_minute`, and `clock_offset_ms`.
-4. Confirm whether the current condition is bounded by retry policy or requires operator intervention.
+1. Query `GET /api/runtime-status` and record the bounded symbol entries for `BTC-USD` and `ETH-USD`.
+2. Record `readiness`, feed state (`HEALTHY`, `DEGRADED`, or `STALE`), and emitted degradation reasons exactly as shown.
+3. From the route, record `feedHealth`, `connectionState`, `consecutiveReconnects`, `depthStatus`, `lastMessageAt`, and `lastSnapshotAt` for the affected symbol.
+4. If you need the numeric lag or rate counters, inspect the companion metrics source for `message_lag_ms`, `snapshot_lag_ms`, `reconnect_count`, `resync_count`, `sequence_gap_count`, `snapshot_recovery_attempts_per_minute`, `rest_poll_attempts_per_minute`, and `clock_offset_ms`.
+5. Confirm whether the condition is warm-up (`readiness=NOT_READY`) or a readable runtime degradation (`readiness=READY` with `DEGRADED` or `STALE` feed health).
+6. Confirm whether the current condition is bounded by retry policy or requires operator intervention.
 
 ## Reason-Specific Actions
 
@@ -28,5 +30,7 @@
 ## Exit Criteria
 
 - Return to `HEALTHY` with no degradation reasons.
+- Return to `readiness=READY` for the symbol under investigation once warm-up is complete.
 - Confirm canonical outputs still preserve `exchangeTs`, `recvTs`, venue, symbol, market type, and degradation markers during recovery.
 - If the feed remains `DEGRADED` or `STALE`, keep the condition visible and hand off with the active reasons unchanged.
+- `GET /healthz` is process health only; do not treat an `ok` response there as proof that market-data runtime health has recovered.

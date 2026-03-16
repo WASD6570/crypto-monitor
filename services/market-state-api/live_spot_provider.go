@@ -21,6 +21,10 @@ type SpotCurrentStateReader interface {
 	Snapshot(ctx context.Context, now time.Time) (SpotCurrentStateSnapshot, error)
 }
 
+type USDMInfluenceInputReader interface {
+	SnapshotUSDMInfluenceInput(ctx context.Context, now time.Time) (features.USDMInfluenceEvaluatorInput, error)
+}
+
 type SpotCurrentStateSnapshot struct {
 	Observations []SpotCurrentStateObservation
 }
@@ -39,6 +43,7 @@ type SpotCurrentStateObservation struct {
 
 type spotLiveCurrentStateSource struct {
 	reader      SpotCurrentStateReader
+	usdmReader  USDMInfluenceInputReader
 	slowContext SlowContextReader
 }
 
@@ -47,6 +52,7 @@ type symbolAssemblyState struct {
 	usa          features.CompositeSnapshot
 	buckets      []features.MarketQualityBucket
 	symbolRegime features.SymbolRegimeSnapshot
+	usdmInfluence *features.MarketStateCurrentUSDMInfluenceProvenance
 	hasData      bool
 }
 
@@ -54,7 +60,8 @@ func newSpotLiveCurrentStateSource(reader SpotCurrentStateReader, slowContextRea
 	if reader == nil {
 		return nil, fmt.Errorf("spot current-state reader is required")
 	}
-	return &spotLiveCurrentStateSource{reader: reader, slowContext: slowContextReader}, nil
+	usdmReader, _ := reader.(USDMInfluenceInputReader)
+	return &spotLiveCurrentStateSource{reader: reader, usdmReader: usdmReader, slowContext: slowContextReader}, nil
 }
 
 func (s *spotLiveCurrentStateSource) Bundle(ctx context.Context, now time.Time) (currentStateBundle, error) {
@@ -73,6 +80,10 @@ func (s *spotLiveCurrentStateSource) Bundle(ctx context.Context, now time.Time) 
 	if err != nil {
 		return currentStateBundle{}, err
 	}
+	signalsBySymbol, err := currentStateUSDMInfluenceSignals(ctx, featureService, s.usdmReader, now)
+	if err != nil {
+		return currentStateBundle{}, err
+	}
 
 	grouped, err := groupSpotObservations(snapshot.Observations)
 	if err != nil {
@@ -85,6 +96,12 @@ func (s *spotLiveCurrentStateSource) Bundle(ctx context.Context, now time.Time) 
 		if err != nil {
 			return currentStateBundle{}, err
 		}
+		adjustedRegime, provenance, err := features.ApplyUSDMInfluenceToSymbolRegime(state.symbolRegime, signalsBySymbol[symbol])
+		if err != nil {
+			return currentStateBundle{}, err
+		}
+		state.symbolRegime = adjustedRegime
+		state.usdmInfluence = provenance
 		assembled[symbol] = state
 		regimes[symbol] = state.symbolRegime
 	}
@@ -107,6 +124,7 @@ func (s *spotLiveCurrentStateSource) Bundle(ctx context.Context, now time.Time) 
 			RecentContext: append([]features.MarketQualityBucket(nil), state.buckets...),
 			SymbolRegime:  state.symbolRegime,
 			GlobalRegime:  globalRegime,
+			USDMInfluence: state.usdmInfluence,
 		}
 		response, err := featureService.QueryCurrentStateWithSlowContext(query, currentStateSlowContextQuery(symbol, now))
 		if err != nil {

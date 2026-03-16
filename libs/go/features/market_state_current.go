@@ -48,7 +48,18 @@ type MarketStateCurrentProvenance struct {
 	BucketRefs        []MarketStateCurrentBucketRef `json:"bucketRefs,omitempty"`
 	SymbolBucketEnd   string                        `json:"symbolBucketEnd,omitempty"`
 	GlobalBucketEnd   string                        `json:"globalBucketEnd,omitempty"`
+	USDMInfluence     *MarketStateCurrentUSDMInfluenceProvenance `json:"usdmInfluence,omitempty"`
 	HistorySeam       MarketStateHistoryAuditSeam   `json:"historySeam"`
+}
+
+type MarketStateCurrentUSDMInfluenceProvenance struct {
+	Evaluated        bool                    `json:"evaluated"`
+	Posture          USDMInfluencePosture    `json:"posture,omitempty"`
+	PrimaryReason    USDMInfluenceReasonCode `json:"primaryReason,omitempty"`
+	AppliedCap       bool                    `json:"appliedCap,omitempty"`
+	ObservedAt       string                  `json:"observedAt,omitempty"`
+	ConfigVersion    string                  `json:"configVersion,omitempty"`
+	AlgorithmVersion string                  `json:"algorithmVersion,omitempty"`
 }
 
 type MarketStateCurrentCompositeSection struct {
@@ -113,6 +124,7 @@ type MarketStateCurrentSymbolSummary struct {
 	GlobalState      RegimeState              `json:"globalState"`
 	ReasonCodes      []RegimeReasonCode       `json:"reasonCodes,omitempty"`
 	Availability     CurrentStateAvailability `json:"availability"`
+	USDMInfluence    *MarketStateCurrentUSDMInfluenceProvenance `json:"usdmInfluence,omitempty"`
 	ConfigVersion    string                   `json:"configVersion,omitempty"`
 	AlgorithmVersion string                   `json:"algorithmVersion,omitempty"`
 }
@@ -135,6 +147,7 @@ type SymbolCurrentStateQuery struct {
 	SymbolRegime  SymbolRegimeSnapshot
 	GlobalRegime  GlobalRegimeSnapshot
 	RecentContext []MarketQualityBucket
+	USDMInfluence  *MarketStateCurrentUSDMInfluenceProvenance
 }
 
 type GlobalCurrentStateQuery struct {
@@ -173,7 +186,7 @@ func BuildMarketStateCurrentResponse(query SymbolCurrentStateQuery) (MarketState
 	}
 	response.RecentContext = buildRecentContext(query.RecentContext)
 	response.AsOf = computeCurrentStateAsOf(query.AsOf, query.World.BucketTs, query.USA.BucketTs, query.SymbolRegime.EffectiveBucketEnd, query.GlobalRegime.EffectiveBucketEnd, bucketEnd(buckets[BucketFamily30s]), bucketEnd(buckets[BucketFamily2m]), bucketEnd(buckets[BucketFamily5m]))
-	response.Provenance = buildProvenance(query.World, query.USA, buckets, query.SymbolRegime, query.GlobalRegime, query.RecentContext)
+	response.Provenance = buildProvenance(query.World, query.USA, buckets, query.SymbolRegime, query.GlobalRegime, query.RecentContext, query.USDMInfluence)
 	return response, nil
 }
 
@@ -199,6 +212,7 @@ func BuildMarketStateCurrentGlobalResponse(query GlobalCurrentStateQuery) (Marke
 			GlobalState:      symbol.Regime.Global.State,
 			ReasonCodes:      stableRegimeReasonSet(symbol.Regime.Symbol.Reasons, symbol.Regime.Global.Reasons),
 			Availability:     symbol.Regime.Availability,
+			USDMInfluence:    cloneUSDMInfluenceProvenance(symbol.Provenance.USDMInfluence),
 			ConfigVersion:    symbol.Version.ConfigVersion,
 			AlgorithmVersion: symbol.Version.AlgorithmVersion,
 		})
@@ -296,7 +310,7 @@ func buildRecentContextFamily(family BucketFamily, buckets []MarketQualityBucket
 	}
 }
 
-func buildProvenance(world CompositeSnapshot, usa CompositeSnapshot, buckets map[BucketFamily]MarketQualityBucket, symbol SymbolRegimeSnapshot, global GlobalRegimeSnapshot, recent []MarketQualityBucket) MarketStateCurrentProvenance {
+func buildProvenance(world CompositeSnapshot, usa CompositeSnapshot, buckets map[BucketFamily]MarketQualityBucket, symbol SymbolRegimeSnapshot, global GlobalRegimeSnapshot, recent []MarketQualityBucket, usdm *MarketStateCurrentUSDMInfluenceProvenance) MarketStateCurrentProvenance {
 	refs := []MarketStateCurrentBucketRef{}
 	for _, family := range []BucketFamily{BucketFamily30s, BucketFamily2m, BucketFamily5m} {
 		bucket := buckets[family]
@@ -325,12 +339,21 @@ func buildProvenance(world CompositeSnapshot, usa CompositeSnapshot, buckets map
 		BucketRefs:        refs,
 		SymbolBucketEnd:   symbol.EffectiveBucketEnd,
 		GlobalBucketEnd:   global.EffectiveBucketEnd,
+		USDMInfluence:     cloneUSDMInfluenceProvenance(usdm),
 		HistorySeam: MarketStateHistoryAuditSeam{
 			ReservedSchemaFamily: "market-state-history-and-audit-reads",
 			BucketRefs:           refs,
 		},
 	}
 	return provenance
+}
+
+func cloneUSDMInfluenceProvenance(value *MarketStateCurrentUSDMInfluenceProvenance) *MarketStateCurrentUSDMInfluenceProvenance {
+	if value == nil {
+		return nil
+	}
+	copy := *value
+	return &copy
 }
 
 func latestBucketsByFamily(buckets []MarketQualityBucket) map[BucketFamily]MarketQualityBucket {

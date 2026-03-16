@@ -111,6 +111,56 @@ func (o *SpotDepthRecoveryOwner) Status() SpotDepthRecoveryStatus {
 	}
 }
 
+func (o *SpotDepthRecoveryOwner) StatusAt(now time.Time) (SpotDepthRecoveryStatus, error) {
+	if o == nil {
+		return SpotDepthRecoveryStatus{}, fmt.Errorf("spot depth recovery owner is required")
+	}
+	if now.IsZero() {
+		return SpotDepthRecoveryStatus{}, fmt.Errorf("current time is required")
+	}
+	status := o.Status()
+	if status.State == SpotDepthRecoveryIdle {
+		return status, nil
+	}
+	if status.State == SpotDepthRecoverySynchronized {
+		refreshStatus, err := o.runtime.SnapshotRefreshStatus(now, status.LastSnapshotAt)
+		if err != nil {
+			return SpotDepthRecoveryStatus{}, err
+		}
+		status.RefreshDue = refreshStatus.Due
+		return status, nil
+	}
+
+	cooldownStatus, err := o.runtime.SnapshotRecoveryStatus(now, o.lastRecoveryAttemptAt)
+	if err != nil {
+		return SpotDepthRecoveryStatus{}, err
+	}
+	rateLimitStatus, err := o.runtime.SnapshotRecoveryRateLimitStatus(now, o.recentRecoveryAttempts)
+	if err != nil {
+		return SpotDepthRecoveryStatus{}, err
+	}
+
+	status.RemainingCooldown = 0
+	status.RetryAfter = 0
+	status.Synchronized = false
+	if !cooldownStatus.Ready {
+		status.State = SpotDepthRecoveryCooldownBlocked
+		status.RemainingCooldown = cooldownStatus.RemainingCooldown
+		return status, nil
+	}
+	if !rateLimitStatus.Allowed {
+		status.State = SpotDepthRecoveryRateLimitBlocked
+		status.RetryAfter = rateLimitStatus.RetryAfter
+		return status, nil
+	}
+	if status.Trigger == SpotDepthRecoveryTriggerBootstrapFail {
+		status.State = SpotDepthRecoveryBootstrapFailed
+		return status, nil
+	}
+	status.State = SpotDepthRecoveryResyncing
+	return status, nil
+}
+
 func (o *SpotDepthRecoveryOwner) StartSynchronized(sync SpotDepthBootstrapSync) error {
 	if o == nil {
 		return fmt.Errorf("spot depth recovery owner is required")
@@ -291,26 +341,30 @@ func (o *SpotDepthRecoveryOwner) HealthStatus(now time.Time, connectionState ing
 	if now.IsZero() {
 		return ingestion.FeedHealthStatus{}, fmt.Errorf("current time is required")
 	}
+	recoveryStatus, err := o.StatusAt(now)
+	if err != nil {
+		return ingestion.FeedHealthStatus{}, err
+	}
 	healthConnectionState := connectionState
-	if o.state != SpotDepthRecoverySynchronized && o.state != SpotDepthRecoveryIdle {
+	if recoveryStatus.State != SpotDepthRecoverySynchronized && recoveryStatus.State != SpotDepthRecoveryIdle {
 		healthConnectionState = ingestion.ConnectionResyncing
 	}
 	status, err := o.runtime.EvaluateAdapterInput(AdapterHealthInput{
 		ConnectionState:          healthConnectionState,
 		Now:                      now,
-		LastMessageAt:            o.lastMessageAt,
-		LastSnapshotAt:           o.lastSnapshotAt,
-		SequenceGapDetected:      o.sequenceGapDetected,
+		LastMessageAt:            recoveryStatus.LastMessageAt,
+		LastSnapshotAt:           recoveryStatus.LastSnapshotAt,
+		SequenceGapDetected:      recoveryStatus.SequenceGapDetected,
 		LocalClockOffset:         localClockOffset,
-		LastSnapshotRecoveryAt:   o.lastRecoveryAttemptAt,
+		LastSnapshotRecoveryAt:   recoveryStatus.LastRecoveryAttemptAt,
 		RecentSnapshotRecoveries: append([]time.Time(nil), o.recentRecoveryAttempts...),
 		ConsecutiveReconnects:    consecutiveReconnects,
-		ResyncCount:              o.resyncCount,
+		ResyncCount:              recoveryStatus.ResyncCount,
 	})
 	if err != nil {
 		return ingestion.FeedHealthStatus{}, err
 	}
-	if o.state == SpotDepthRecoveryRateLimitBlocked {
+	if recoveryStatus.State == SpotDepthRecoveryRateLimitBlocked {
 		status.Reasons = append(status.Reasons, ingestion.ReasonRateLimit)
 	}
 	status.Reasons = dedupeDepthRecoveryReasons(status.Reasons)

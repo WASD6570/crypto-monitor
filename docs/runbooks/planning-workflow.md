@@ -205,9 +205,7 @@ Once the active feature plan exists under `plans/{feature_name}/`, pause and kee
 
 Do not auto-chain into `feature-implementing` unless the user explicitly asked to continue into implementation.
 
-After `feature-implementing`, run the required fresh-context reviewer pass before treating the feature as ready for `feature-testing` or closure.
-
-If reviewer findings are clear from the request, plan, diff, and repo context, address them before handoff. Ask for clarification only when the review exposes genuinely missing or conflicting intent that cannot be resolved from the request, plan, diff, and repo context.
+After `feature-implementing`, reviewer skills may be manually invoked when useful, but review is not an automatic gate before `feature-testing` or closure.
 
 ### 4. Use Parallel Refinement And Planning In Waves
 

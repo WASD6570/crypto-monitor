@@ -93,8 +93,8 @@ func TestUSDMWebsocketRuntimeTracksConnectResubscribeReconnectAndRollover(t *tes
 	if err != nil {
 		t.Fatalf("handle disconnect: %v", err)
 	}
-	if plan.Delay != 500*time.Millisecond {
-		t.Fatalf("reconnect delay = %s, want %s", plan.Delay, 500*time.Millisecond)
+	if plan.Delay != config.Adapter.ReconnectBackoffMin {
+		t.Fatalf("reconnect delay = %s, want %s", plan.Delay, config.Adapter.ReconnectBackoffMin)
 	}
 	if err := usdm.StartConnect(plan.RetryAt); err != nil {
 		t.Fatalf("restart connect: %v", err)

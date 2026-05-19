@@ -47,6 +47,82 @@ func TestRuntimeHealthSnapshotReturnsStableNotReadyEntries(t *testing.T) {
 	}
 }
 
+func TestProviderRuntimeStatusIncludesUSDMStatusDeterministically(t *testing.T) {
+	runtimeConfig, _ := testBinanceRuntime(t)
+	runtimeConfig.OpenInterestPollsPerMinuteLimit = 1
+	runtime, err := venuebinance.NewRuntime(runtimeConfig)
+	if err != nil {
+		t.Fatalf("new runtime: %v", err)
+	}
+	fixedNow := time.Date(2026, time.March, 15, 12, 0, 0, 0, time.UTC)
+	spotOwner, err := newBinanceSpotRuntimeOwner(runtimeConfig, runtime, binanceSpotRuntimeOwnerOptions{
+		client:       http.DefaultClient,
+		baseURL:      "http://example.com",
+		websocketURL: "ws://example.com",
+		now:          func() time.Time { return fixedNow },
+	})
+	if err != nil {
+		t.Fatalf("new spot runtime owner: %v", err)
+	}
+	spotOwner.started = true
+	btc := runtimeHealthStateForSymbol(t, spotOwner, "BTC-USD")
+	seedPublishableRuntimeHealthState(t, btc, 1001, 64000.10, 64000.20, fixedNow.Add(-2*time.Second), fixedNow.Add(-2*time.Second))
+
+	usdmOwner, err := newBinanceUSDMInfluenceOwner(runtimeConfig, runtime, binanceUSDMInfluenceOwnerOptions{
+		client:           http.DefaultClient,
+		baseURL:          "http://example.com",
+		websocketURL:     "ws://example.com",
+		heartbeatTimeout: runtimeConfig.HeartbeatTimeout,
+		now:              func() time.Time { return fixedNow },
+	})
+	if err != nil {
+		t.Fatalf("new usdm influence owner: %v", err)
+	}
+	usdmOwner.started = true
+	seedUSDMRuntimeHealthState(t, usdmOwner, runtimeConfig, fixedNow)
+
+	provider := &providerWithRuntime{owner: spotOwner, usdmOwner: usdmOwner}
+	first, err := provider.RuntimeStatus(context.Background())
+	if err != nil {
+		t.Fatalf("first runtime status: %v", err)
+	}
+	second, err := provider.RuntimeStatus(context.Background())
+	if err != nil {
+		t.Fatalf("second runtime status: %v", err)
+	}
+	if !reflect.DeepEqual(first, second) {
+		t.Fatalf("repeated runtime status responses differ:\nfirst=%+v\nsecond=%+v", first, second)
+	}
+	if len(first.Symbols) != 2 || first.Symbols[0].Symbol != "BTC-USD" || first.Symbols[1].Symbol != "ETH-USD" {
+		t.Fatalf("runtime status symbols = %+v, want [BTC-USD ETH-USD]", first.Symbols)
+	}
+	btcStatus := first.Symbols[0]
+	if btcStatus.Readiness != marketstateapi.RuntimeStatusReady {
+		t.Fatalf("btc readiness = %q, want %q", btcStatus.Readiness, marketstateapi.RuntimeStatusReady)
+	}
+	if btcStatus.USDMStatus == nil {
+		t.Fatal("btc usdm status is nil")
+	}
+	if btcStatus.USDMStatus.ConnectionState != ingestion.ConnectionReconnecting {
+		t.Fatalf("btc usdm connection state = %q, want %q", btcStatus.USDMStatus.ConnectionState, ingestion.ConnectionReconnecting)
+	}
+	if btcStatus.USDMStatus.Websocket.State != ingestion.FeedHealthStale {
+		t.Fatalf("btc usdm websocket state = %q, want %q", btcStatus.USDMStatus.Websocket.State, ingestion.FeedHealthStale)
+	}
+	if !hasReason(btcStatus.USDMStatus.Websocket.Reasons, ingestion.ReasonConnectionNotReady) || !hasReason(btcStatus.USDMStatus.Websocket.Reasons, ingestion.ReasonMessageStale) {
+		t.Fatalf("btc usdm websocket reasons = %v, want connection-not-ready and message-stale", btcStatus.USDMStatus.Websocket.Reasons)
+	}
+	if !hasReason(btcStatus.USDMStatus.OpenInterest.Reasons, ingestion.ReasonRateLimit) {
+		t.Fatalf("btc usdm open-interest reasons = %v, want rate-limit", btcStatus.USDMStatus.OpenInterest.Reasons)
+	}
+	if btcStatus.USDMStatus.LastMarkPriceAt == nil || btcStatus.USDMStatus.OpenInterestRateLimitUntil == nil {
+		t.Fatalf("btc usdm timestamps should include mark price and rate-limit: %+v", btcStatus.USDMStatus)
+	}
+	if first.Symbols[1].USDMStatus == nil {
+		t.Fatal("eth usdm status is nil")
+	}
+}
+
 func TestRuntimeHealthSnapshotTracksHealthyDegradedAndRecoveredStatesDeterministically(t *testing.T) {
 	runtimeConfig, owner := newRuntimeHealthOwnerForTest(t)
 	btc := runtimeHealthStateForSymbol(t, owner, "BTC-USD")
@@ -319,6 +395,40 @@ func runtimeHealthSync(t *testing.T, sourceSymbol string, lastUpdateID int64, re
 	return venuebinance.SpotDepthBootstrapSync{
 		SourceSymbol: sourceSymbol,
 		Snapshot:     snapshot,
+	}
+}
+
+func seedUSDMRuntimeHealthState(t *testing.T, owner *binanceUSDMInfluenceOwner, runtimeConfig ingestion.VenueRuntimeConfig, now time.Time) {
+	t.Helper()
+	owner.stateMu.Lock()
+	defer owner.stateMu.Unlock()
+	markAt := now.Add(-runtimeConfig.Adapter.MessageStaleAfter - time.Second)
+	connectAt := markAt.Add(-time.Second)
+	if err := owner.runtime.StartConnect(connectAt); err != nil {
+		t.Fatalf("start usdm connect: %v", err)
+	}
+	command, err := owner.runtime.CompleteConnect(connectAt)
+	if err != nil {
+		t.Fatalf("complete usdm connect: %v", err)
+	}
+	if command == nil {
+		t.Fatal("expected usdm subscribe command")
+	}
+	if err := owner.runtime.AckSubscribe(connectAt.Add(time.Millisecond), command.ID); err != nil {
+		t.Fatalf("ack usdm subscribe: %v", err)
+	}
+	if _, err := owner.runtime.AcceptMarkPriceFrame([]byte(`{"e":"markPriceUpdate","s":"BTCUSDT"}`), markAt); err != nil {
+		t.Fatalf("accept usdm mark price: %v", err)
+	}
+	if _, err := owner.runtime.HandleDisconnect(now.Add(-500*time.Millisecond), venuebinance.USDMReconnectCauseTransport); err != nil {
+		t.Fatalf("disconnect usdm runtime: %v", err)
+	}
+	firstPollAt := now.Add(-runtimeConfig.OpenInterestPollInterval - time.Second)
+	if _, err := owner.poller.BeginPoll("BTCUSDT", firstPollAt); err != nil {
+		t.Fatalf("begin first open-interest poll: %v", err)
+	}
+	if _, err := owner.poller.BeginPoll("BTCUSDT", now); err == nil {
+		t.Fatal("expected open-interest rate limit")
 	}
 }
 

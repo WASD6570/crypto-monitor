@@ -213,6 +213,63 @@ func (o *binanceUSDMInfluenceOwner) SnapshotUSDMInfluenceInput(ctx context.Conte
 	return o.inputOwner.Snapshot(now.UTC())
 }
 
+func (o *binanceUSDMInfluenceOwner) RuntimeHealthUSDMSnapshot(ctx context.Context, now time.Time) (map[string]binanceRuntimeHealthUSDMSnapshot, error) {
+	if ctx == nil {
+		return nil, fmt.Errorf("context is required")
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if now.IsZero() {
+		return nil, fmt.Errorf("current time is required")
+	}
+	now = now.UTC()
+
+	o.mu.RLock()
+	started := o.started
+	o.mu.RUnlock()
+	if !started {
+		return nil, fmt.Errorf("binance usdm influence owner is not started")
+	}
+
+	o.stateMu.Lock()
+	defer o.stateMu.Unlock()
+	websocketHealth, err := o.runtime.HealthStatus(now)
+	if err != nil {
+		return nil, err
+	}
+	websocketState := o.runtime.State()
+	pollerStates := o.poller.State()
+	openInterestHealth := make(map[string]ingestion.FeedHealthStatus, len(pollerStates))
+	for _, state := range pollerStates {
+		health, err := o.poller.HealthStatus(state.SourceSymbol, now)
+		if err != nil {
+			return nil, err
+		}
+		openInterestHealth[state.SourceSymbol] = health
+	}
+	pollerStates = o.poller.State()
+
+	status := make(map[string]binanceRuntimeHealthUSDMSnapshot, len(pollerStates))
+	for _, state := range pollerStates {
+		health, ok := openInterestHealth[state.SourceSymbol]
+		if !ok {
+			return nil, fmt.Errorf("missing open interest health for %s", state.SourceSymbol)
+		}
+		status[state.Symbol] = binanceRuntimeHealthUSDMSnapshot{
+			WebsocketFeedHealth:        websocketHealth,
+			OpenInterestFeedHealth:     health,
+			ConnectionState:            websocketState.ConnectionState,
+			ConsecutiveReconnects:      websocketState.ConsecutiveReconnects,
+			LastMarkPriceAt:            websocketState.LastMarkPriceAt,
+			LastOpenInterestAt:         state.LastSuccessAt,
+			NextOpenInterestPollAt:     state.NextPollAt,
+			OpenInterestRateLimitUntil: state.RateLimitUntil,
+		}
+	}
+	return status, nil
+}
+
 func (o *binanceUSDMInfluenceOwner) run(ctx context.Context, done chan struct{}) {
 	defer close(done)
 	pollDone := make(chan struct{})
@@ -431,9 +488,9 @@ func (o *binanceUSDMInfluenceOwner) pingLoop(ctx context.Context, conn *websocke
 			}
 			o.stateMu.Unlock()
 			if shouldRollover && rolloverErr == nil {
-					_ = conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "rollover"), time.Now().Add(time.Second))
-					_ = conn.Close()
-					return
+				_ = conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "rollover"), time.Now().Add(time.Second))
+				_ = conn.Close()
+				return
 			}
 			if err := conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(time.Second)); err != nil {
 				return

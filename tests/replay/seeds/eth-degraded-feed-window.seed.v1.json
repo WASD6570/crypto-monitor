@@ -19,7 +19,7 @@
     "orderedSourceRecordIds": [
       "heartbeat:2026-03-06T12:02:00.000Z",
       "trade:2010",
-      "mark-index:2026-03-06T12:00:05.000Z"
+      "mark-index:2026-03-06T12:00:05Z"
     ]
   }
 }

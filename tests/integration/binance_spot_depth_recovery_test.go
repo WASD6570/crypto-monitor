@@ -55,7 +55,7 @@ func TestIngestionBinanceSpotDepthRecovery(t *testing.T) {
 			t.Fatalf("buffer recovery delta: %v", err)
 		}
 
-		recovered, err := owner.Recover(context.Background(), mustRecvTime(t, recovery.RawMessages[1]).Add(-220*time.Millisecond))
+		recovered, err := owner.Recover(context.Background(), mustRecvTime(t, recovery.RawMessages[1]).Add(500*time.Millisecond))
 		if err != nil {
 			t.Fatalf("recover synchronized depth: %v", err)
 		}
@@ -134,6 +134,7 @@ func TestIngestionBinanceSpotDepthRecovery(t *testing.T) {
 		fixture := loadDepthRecoveryFixture(t, "tests/fixtures/events/binance/BTC-USD/edge-depth-recovery-rate-limit-usdt.fixture.v1.json")
 		_, supervisor, sync := bootstrapSpotDepthPath(t, bootstrap)
 		runtimeConfig := loadRuntimeConfig(t, ingestion.VenueBinance)
+		runtimeConfig.SnapshotCooldown = time.Second
 		runtimeConfig.SnapshotRecoveryPerMinuteLimit = 1
 		runtime, err := venuebinance.NewRuntime(runtimeConfig)
 		if err != nil {

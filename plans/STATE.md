@@ -27,21 +27,23 @@
 
 ## Current Snapshot
 
-- Last updated: 2026-03-16
+- Last updated: 2026-05-19
 - Active initiatives:
   - `initiatives/crypto-market-copilot-binance-integration-completion/`
 - Active feature plans in `plans/`:
-  - `plans/binance-live-reload-dev-workflow/`
-- Ready to refine:
-  - `binance-long-run-runtime-hardening`
-- Ready to plan: none
-- Ready to implement: none
+  - `plans/binance-spot-depth-liquidity-indicators/`
+- Ready to refine: none
+- Ready to plan: `binance-usdm-derivatives-indicator-enrichment` only if explicitly prioritized for parallel planning
+- Ready to implement:
+  - `plans/binance-spot-depth-liquidity-indicators/`
 - In progress: none
-- Ready for testing:
-  - `binance-live-reload-dev-workflow`
-- Next recommended: run `feature-testing` for `plans/binance-live-reload-dev-workflow/`
-- Ready in parallel after that starts: `binance-long-run-runtime-hardening` can still move through `program-refining`
+- Ready for testing: none
+- Next recommended: run `feature-implementing` for `plans/binance-spot-depth-liquidity-indicators/`
+- Ready in parallel: USD-M derivatives enrichment can be planned in parallel only if explicitly prioritized; run `feature-testing` for the dev-only live-reload workflow only if the missing active plan directory is restored or the testing matrix is recreated from implementation evidence
 - Recently archived feature plans:
+  - `plans/completed/binance-spot-trade-flow-feature-inputs/`
+  - `plans/completed/binance-live-runtime-soak-and-failure-hardening/`
+  - `plans/completed/binance-validation-baseline-reconciliation/`
   - `plans/completed/binance-rollout-compose-and-ops-handoff/`
   - `plans/completed/binance-usdm-output-application-and-replay-proof/`
   - `plans/completed/binance-usdm-influence-policy-and-signal/`
@@ -51,21 +53,22 @@
 
 ## Next Recommended
 
-1. Run `feature-testing` for `plans/binance-live-reload-dev-workflow/`.
-2. Keep the default `docker-compose.yml` path as the prod-like reference; isolate all live-reload behavior in dev-only wiring.
-3. Preserve the exact same Go-owned live market path in the dev workflow: no mocks, no fixture-backed runtime reads, and no browser-side Binance access.
+1. Use `plans/completed/binance-spot-trade-flow-feature-inputs/testing-report.md` as the archived internal trade-flow input evidence for later indicator/API work.
+2. Run `feature-implementing` for `plans/binance-spot-depth-liquidity-indicators/`.
+3. USD-M derivatives enrichment can be planned in parallel only if explicitly prioritized; otherwise run it after Spot depth-liquidity implementation/testing settles.
+4. Keep alerting and dashboard readiness out of scope until service-owned enriched indicator boundaries are planned, implemented, tested, and archived.
 
 ## Ready In Parallel
 
 | Item | Type | Status | Depends On | Next Action | Notes |
 |---|---|---|---|---|---|
-| `binance-long-run-runtime-hardening` | initiative seed | `ready_to_refine` | Wave 2 and Wave 3 outcomes archived | Run `program-refining` when planning capacity exists | Independent follow-on planning can continue while the dev workflow is implemented |
+| `plans/epics/binance-market-intelligence-gap-closure/` | refined epic | `in_progress` | Wave 2 and Wave 3 outcomes archived, trade-flow archived | Run `feature-implementing` for `plans/binance-spot-depth-liquidity-indicators/` | Depth-liquidity plan is ready to implement; USD-M derivatives enrichment can be planned in parallel only if explicitly prioritized |
 
 ## Blocked
 
 | Item | Type | Status | Depends On | Blocker | Next Action |
 |---|---|---|---|---|---|
-| none | - | - | - | - | - |
+| `binance-live-reload-dev-workflow` | feature-testing artifact | `blocked` | `plans/completed/binance-rollout-compose-and-ops-handoff/` | `plans/binance-live-reload-dev-workflow/` is referenced by durable state but absent from the current worktree | Restore/recreate the active plan directory or recreate the testing matrix from implementation evidence before archive testing |
 
 ## Initiative State
 
@@ -78,8 +81,8 @@
 |---|---|---|---|---|---|---|---|
 | `plans/epics/binance-runtime-health-and-operator-observability/` | refined epic | `archived` | `plans/epics/binance-runtime-health-and-operator-observability/` | `plans/completed/binance-runtime-health-snapshot-owner/` | - | Use archived child evidence as the settled operator runtime-health surface | The endpoint-and-ops-handoff child is complete and archived |
 | `plans/epics/binance-usdm-market-state-influence/` | refined epic | `archived` | `plans/epics/binance-usdm-market-state-influence/` | Wave 1 complete and `plans/epics/binance-usdm-context-sensors/` | - | Use archived USD-M child evidence as the settled market-state semantics reference | Both USD-M child plans are complete and archived |
-| `plans/epics/binance-environment-config-and-rollout-hardening/` | refined epic | `in_progress` | `plans/epics/binance-environment-config-and-rollout-hardening/` | Wave 2 runtime-health and USD-M semantics complete | `binance-long-run-runtime-hardening` | Run `feature-testing` for `plans/binance-live-reload-dev-workflow/` | The prod-like rollout posture is archived, and the bounded dev-only live-reload follow-up is now implemented and reviewed |
-| `binance-long-run-runtime-hardening` | initiative seed | `ready_to_refine` | `initiatives/crypto-market-copilot-binance-integration-completion/03-handoff.md` | Wave 2 and Wave 3 outcomes archived | - | Run `program-refining` | Final hardening wave is now unblocked |
+| `plans/epics/binance-environment-config-and-rollout-hardening/` | refined epic | `blocked` | `plans/epics/binance-environment-config-and-rollout-hardening/` | Wave 2 runtime-health and USD-M semantics complete | `plans/epics/binance-market-intelligence-gap-closure/` | Restore/recreate `plans/binance-live-reload-dev-workflow/` before archive testing | The prod-like rollout posture is archived, dev-only live-reload implementation evidence exists, but the referenced active feature plan directory is absent |
+| `plans/epics/binance-market-intelligence-gap-closure/` | refined epic | `in_progress` | `plans/epics/binance-market-intelligence-gap-closure/` | Wave 2 and Wave 3 outcomes archived | - | Run `feature-implementing` for `plans/binance-spot-depth-liquidity-indicators/` | Depth-liquidity plan is ready to implement while alerting remains out of scope |
 
 - Historical epic context retained for reference only: `plans/epics/binance-streaming-market-state-runtime-integration/`
 
@@ -95,12 +98,15 @@
 
 | Feature Plan | Status | Depends On | Next Action | Notes |
 |---|---|---|---|---|
-| `plans/binance-live-reload-dev-workflow/` | `ready_for_testing` | `plans/completed/binance-rollout-compose-and-ops-handoff/` | Run `feature-testing` | Dev-only Vite HMR and Go auto-restart are implemented, validated, and ready for final archive testing |
+| `plans/binance-spot-depth-liquidity-indicators/` | `ready_to_implement` | `plans/completed/binance-live-runtime-soak-and-failure-hardening/`, `plans/completed/binance-spot-depth-bootstrap-and-buffering/`, `plans/completed/binance-spot-depth-resync-and-snapshot-health/`, `plans/completed/binance-spot-runtime-read-model-owner/` | Run `feature-implementing` for this plan | Internal Go-owned Spot depth-liquidity indicators and observed current-state liquidity score; public API/dashboard indicator exposure remains deferred |
 
 ## Recently Archived
 
 | Item | Archived State | Evidence | Notes |
 |---|---|---|---|
+| `plans/completed/binance-spot-trade-flow-feature-inputs/` | `archived` | `plans/completed/binance-spot-trade-flow-feature-inputs/testing-report.md` | Internal Go-owned Spot trade-flow feature inputs passed unit/service, runtime, integration, replay, full Go, contract, fixture, replay-smoke, and whitespace validation |
+| `plans/completed/binance-live-runtime-soak-and-failure-hardening/` | `archived` | `plans/completed/binance-live-runtime-soak-and-failure-hardening/testing-report.md` | Additive USD-M runtime-status visibility, deterministic failure-path coverage, runtime-soak runbook handoff, and required local feature-testing matrix completed; optional public Binance and Compose checks remain environment-dependent |
+| `plans/completed/binance-validation-baseline-reconciliation/` | `archived` | `plans/completed/binance-validation-baseline-reconciliation/testing-report.md` | Focused Binance runtime tests, `go test ./...`, contract-family validation, TypeScript contract tests, fixture validation, and deterministic replay smoke passed; no live runtime behavior was added |
 | `plans/completed/binance-rollout-compose-and-ops-handoff/` | `archived` | `plans/completed/binance-rollout-compose-and-ops-handoff/testing-report.md` | Compose now pins one prod-like startup posture, the operator rollout runbook matches the live stack, and the repeatable smoke proof plus manual handoff checks passed |
 | `plans/completed/binance-runtime-config-profile-parity/` | `archived` | `plans/completed/binance-runtime-config-profile-parity/testing-report.md` | Checked-in local/dev/prod configs now stay prod-like and identical in runtime behavior, with real-file ingestion invariants, provider config-path consumption proof, and focused Binance USD-M smoke passing |
 | `plans/completed/binance-usdm-output-application-and-replay-proof/` | `archived` | `plans/completed/binance-usdm-output-application-and-replay-proof/testing-report.md` | Conservative USD-M watch-cap application, additive symbol/global provenance, live provider wiring, and deterministic replay proof completed |

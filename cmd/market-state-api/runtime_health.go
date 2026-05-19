@@ -36,10 +36,22 @@ type binanceRuntimeHealthSymbolSnapshot struct {
 	LocalClockOffset      time.Duration
 	ConsecutiveReconnects int
 	DepthStatus           venuebinance.SpotDepthRecoveryStatus
+	USDMStatus            *binanceRuntimeHealthUSDMSnapshot
 	LastAcceptedExchange  time.Time
 	LastAcceptedRecv      time.Time
 	LastMessageAt         time.Time
 	LastSnapshotAt        time.Time
+}
+
+type binanceRuntimeHealthUSDMSnapshot struct {
+	WebsocketFeedHealth        ingestion.FeedHealthStatus
+	OpenInterestFeedHealth     ingestion.FeedHealthStatus
+	ConnectionState            ingestion.ConnectionState
+	ConsecutiveReconnects      int
+	LastMarkPriceAt            time.Time
+	LastOpenInterestAt         time.Time
+	NextOpenInterestPollAt     time.Time
+	OpenInterestRateLimitUntil time.Time
 }
 
 func (o *binanceSpotRuntimeOwner) RuntimeHealthSnapshot(ctx context.Context, now time.Time) (binanceRuntimeHealthSnapshot, error) {
@@ -134,7 +146,7 @@ func (s binanceRuntimeHealthSnapshot) runtimeStatusResponse() marketstateapi.Run
 }
 
 func (s binanceRuntimeHealthSymbolSnapshot) runtimeStatusResponse() marketstateapi.RuntimeStatusSymbolResponse {
-	return marketstateapi.RuntimeStatusSymbolResponse{
+	response := marketstateapi.RuntimeStatusSymbolResponse{
 		Symbol:                 s.Symbol,
 		SourceSymbol:           s.SourceSymbol,
 		QuoteCurrency:          s.QuoteCurrency,
@@ -148,6 +160,24 @@ func (s binanceRuntimeHealthSymbolSnapshot) runtimeStatusResponse() marketstatea
 		LastAcceptedRecv:       nullableRuntimeStatusTime(s.LastAcceptedRecv),
 		LastMessageAt:          nullableRuntimeStatusTime(s.LastMessageAt),
 		LastSnapshotAt:         nullableRuntimeStatusTime(s.LastSnapshotAt),
+	}
+	if s.USDMStatus != nil {
+		usdmStatus := s.USDMStatus.runtimeStatusResponse()
+		response.USDMStatus = &usdmStatus
+	}
+	return response
+}
+
+func (s binanceRuntimeHealthUSDMSnapshot) runtimeStatusResponse() marketstateapi.RuntimeStatusUSDMStatusResponse {
+	return marketstateapi.RuntimeStatusUSDMStatusResponse{
+		Websocket:                  marketstateapi.NewRuntimeStatusFeedHealthResponse(s.WebsocketFeedHealth),
+		OpenInterest:               marketstateapi.NewRuntimeStatusFeedHealthResponse(s.OpenInterestFeedHealth),
+		ConnectionState:            s.ConnectionState,
+		ConsecutiveReconnects:      s.ConsecutiveReconnects,
+		LastMarkPriceAt:            nullableRuntimeStatusTime(s.LastMarkPriceAt),
+		LastOpenInterestAt:         nullableRuntimeStatusTime(s.LastOpenInterestAt),
+		NextOpenInterestPollAt:     nullableRuntimeStatusTime(s.NextOpenInterestPollAt),
+		OpenInterestRateLimitUntil: nullableRuntimeStatusTime(s.OpenInterestRateLimitUntil),
 	}
 }
 

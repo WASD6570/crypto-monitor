@@ -15,6 +15,7 @@ type Service struct {
 	bucketProcessor *features.WorldUSABucketProcessor
 	slowContext     SlowContextReader
 	usdmInfluence   features.USDMInfluenceConfig
+	tradeFlow       *features.SpotTradeFlowProcessor
 }
 
 type ServiceOption func(*Service) error
@@ -53,6 +54,17 @@ func WithUSDMInfluenceConfig(config features.USDMInfluenceConfig) ServiceOption 
 			return err
 		}
 		service.usdmInfluence = config
+		return nil
+	}
+}
+
+func WithSpotTradeFlowConfig(config features.SpotTradeFlowConfig) ServiceOption {
+	return func(service *Service) error {
+		processor, err := features.NewSpotTradeFlowProcessor(config)
+		if err != nil {
+			return err
+		}
+		service.tradeFlow = processor
 		return nil
 	}
 }
@@ -110,6 +122,26 @@ func (s *Service) AdvanceWorldUSABuckets(symbol string, now time.Time) ([]featur
 		return nil, fmt.Errorf("bucket processor is not configured")
 	}
 	return s.bucketProcessor.Advance(symbol, now), nil
+}
+
+func (s *Service) ObserveSpotTradeFlow(observation features.SpotTradeFlowObservation) (features.SpotTradeFlowObservationResult, error) {
+	if s == nil {
+		return features.SpotTradeFlowObservationResult{}, fmt.Errorf("feature engine service is required")
+	}
+	if s.tradeFlow == nil {
+		return features.SpotTradeFlowObservationResult{}, fmt.Errorf("spot trade-flow processor is not configured")
+	}
+	return s.tradeFlow.Observe(observation)
+}
+
+func (s *Service) SpotTradeFlowSnapshot(symbols ...string) ([]features.SpotTradeFlowBucket, error) {
+	if s == nil {
+		return nil, fmt.Errorf("feature engine service is required")
+	}
+	if s.tradeFlow == nil {
+		return nil, fmt.Errorf("spot trade-flow processor is not configured")
+	}
+	return s.tradeFlow.Snapshot(symbols...), nil
 }
 
 func (s *Service) QueryCurrentState(query features.SymbolCurrentStateQuery) (features.MarketStateCurrentResponse, error) {

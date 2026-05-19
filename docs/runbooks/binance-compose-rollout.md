@@ -6,7 +6,7 @@
 - Compose does not switch runtime behavior between `local`, `dev`, and `prod`; the checked-in runtime posture is intentionally prod-like everywhere.
 - `web` remains the public entry point on `http://127.0.0.1:4173`, and it proxies same-origin `/api/*` requests to `market-state-api` on the internal Compose network.
 - `GET /healthz` stays process health only.
-- `GET /api/runtime-status` is the bounded operator runtime-health route for fixed `BTC-USD` and `ETH-USD`.
+- `GET /api/runtime-status` is the bounded operator runtime-health route for fixed `BTC-USD` and `ETH-USD`, including additive `usdmStatus` websocket and open-interest health.
 - `GET /api/market-state/global` and `GET /api/market-state/:symbol` remain consumer read routes.
 
 ## Fast Proof
@@ -27,6 +27,7 @@
 - `readiness=NOT_READY` on `/api/runtime-status` is expected during warm-up.
 - A temporary current-state miss during warm-up is acceptable if `/api/runtime-status` is reachable and still reports `NOT_READY`.
 - Once runtime status reaches `readiness=READY`, treat `DEGRADED` or `STALE` feed health as an operator issue, not a Compose-startup success.
+- `usdmStatus` is auxiliary derivatives context health; record websocket and open-interest `DEGRADED`, `STALE`, or `rate-limit` evidence, but do not treat it as the source of Spot `readiness`.
 - A healthy `/healthz` response does not prove market-data freshness; it only proves the process is serving.
 - If you override Spot URLs for testing, set the paired USD-M override URLs too or startup will fail fast.
 
@@ -34,6 +35,7 @@
 
 - For feed-health vocabulary and `GET /api/runtime-status` field interpretation, use `docs/runbooks/ingestion-feed-health-ops.md`.
 - For active degraded or stale runtime investigation, use `docs/runbooks/degraded-feed-investigation.md`.
+- For the deterministic runtime-soak and optional live-boundary checks, use `docs/runbooks/binance-runtime-soak-and-failure-check.md`.
 
 ## Clean Shutdown
 

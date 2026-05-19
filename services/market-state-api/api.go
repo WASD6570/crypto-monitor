@@ -59,10 +59,22 @@ type RuntimeStatusSymbolResponse struct {
 	LocalClockOffsetMillis int64                            `json:"localClockOffsetMillis"`
 	ConsecutiveReconnects  int                              `json:"consecutiveReconnects"`
 	DepthStatus            RuntimeStatusDepthStatusResponse `json:"depthStatus"`
+	USDMStatus             *RuntimeStatusUSDMStatusResponse `json:"usdmStatus,omitempty"`
 	LastAcceptedExchange   *time.Time                       `json:"lastAcceptedExchange"`
 	LastAcceptedRecv       *time.Time                       `json:"lastAcceptedRecv"`
 	LastMessageAt          *time.Time                       `json:"lastMessageAt"`
 	LastSnapshotAt         *time.Time                       `json:"lastSnapshotAt"`
+}
+
+type RuntimeStatusUSDMStatusResponse struct {
+	Websocket                  RuntimeStatusFeedHealthResponse `json:"websocket"`
+	OpenInterest               RuntimeStatusFeedHealthResponse `json:"openInterest"`
+	ConnectionState            ingestion.ConnectionState       `json:"connectionState"`
+	ConsecutiveReconnects      int                             `json:"consecutiveReconnects"`
+	LastMarkPriceAt            *time.Time                      `json:"lastMarkPriceAt"`
+	LastOpenInterestAt         *time.Time                      `json:"lastOpenInterestAt"`
+	NextOpenInterestPollAt     *time.Time                      `json:"nextOpenInterestPollAt"`
+	OpenInterestRateLimitUntil *time.Time                      `json:"openInterestRateLimitUntil"`
 }
 
 type RuntimeStatusFeedHealthResponse struct {

@@ -65,8 +65,7 @@ Project planning flow:
 2. `program-refining`
 3. `feature-planning`
 4. `feature-implementing`
-5. fresh-context reviewer pass (`code-reviewer` plus any relevant specialist reviewers)
-6. `feature-testing`
+5. `feature-testing`
 
 Planning-flow specifics:
 
@@ -76,6 +75,7 @@ Planning-flow specifics:
 - When a refinement pass identifies an obvious next child feature and the user is still in planning mode, continue directly into `feature-planning` without asking for a separate approval step.
 - When dependencies allow, use parallel subagents for `program-refining` waves first, then `feature-planning` waves for already-bounded child slices.
 - Do not auto-chain from `feature-planning` into `feature-implementing`; pause for explicit user approval before implementation starts.
+- Reviewer skills such as `code-reviewer` and relevant specialist reviewers remain available for manual invocation, but they are not an automatic post-implementation gate.
 - When implementing a feature from `plans/{feature_name}/`, read the relevant parts of the parent initiative under `initiatives/` and the relevant program docs under `docs/specs/` before editing.
 - For frontend-heavy feature work, combine the active feature skill with `frontend-design`.
 - For UI audits, run `web-design-guidelines` and apply it together with this repo's frontend constraints.

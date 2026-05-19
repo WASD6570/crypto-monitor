@@ -119,6 +119,26 @@ func TestHandlerServesRuntimeStatusRoute(t *testing.T) {
 	server := httptest.NewServer(handler.Routes())
 	t.Cleanup(server.Close)
 
+	rawPayload := decodeJSON[map[string]any](t, httpGet(t, server.URL+"/api/runtime-status", http.StatusOK))
+	rawSymbols, ok := rawPayload["symbols"].([]any)
+	if !ok || len(rawSymbols) != 2 {
+		t.Fatalf("raw symbols payload = %#v", rawPayload["symbols"])
+	}
+	rawBTC, ok := rawSymbols[0].(map[string]any)
+	if !ok {
+		t.Fatalf("raw btc payload = %#v", rawSymbols[0])
+	}
+	if _, ok := rawBTC["usdmStatus"]; !ok {
+		t.Fatalf("btc usdmStatus missing from raw payload: %#v", rawBTC)
+	}
+	rawETH, ok := rawSymbols[1].(map[string]any)
+	if !ok {
+		t.Fatalf("raw eth payload = %#v", rawSymbols[1])
+	}
+	if _, ok := rawETH["usdmStatus"]; ok {
+		t.Fatalf("eth usdmStatus should be omitted when nil: %#v", rawETH)
+	}
+
 	response := decodeJSON[RuntimeStatusResponse](t, httpGet(t, server.URL+"/api/runtime-status", http.StatusOK))
 	if !response.GeneratedAt.Equal(time.Date(2026, time.March, 15, 12, 0, 0, 0, time.UTC)) {
 		t.Fatalf("generated at = %s", response.GeneratedAt)
@@ -147,8 +167,20 @@ func TestHandlerServesRuntimeStatusRoute(t *testing.T) {
 	if response.Symbols[0].DepthStatus.RetryAfterMillis != 5000 {
 		t.Fatalf("btc retry after millis = %d", response.Symbols[0].DepthStatus.RetryAfterMillis)
 	}
+	if response.Symbols[0].USDMStatus == nil {
+		t.Fatal("btc usdm status is nil")
+	}
+	if response.Symbols[0].USDMStatus.ConnectionState != ingestion.ConnectionReconnecting {
+		t.Fatalf("btc usdm connection state = %q", response.Symbols[0].USDMStatus.ConnectionState)
+	}
+	if response.Symbols[0].USDMStatus.OpenInterestRateLimitUntil == nil {
+		t.Fatalf("btc usdm rate-limit timestamp should be present: %+v", response.Symbols[0].USDMStatus)
+	}
 	if response.Symbols[1].Readiness != RuntimeStatusNotReady {
 		t.Fatalf("eth readiness = %q", response.Symbols[1].Readiness)
+	}
+	if response.Symbols[1].USDMStatus != nil {
+		t.Fatalf("eth usdm status = %+v, want nil", response.Symbols[1].USDMStatus)
 	}
 	if response.Symbols[1].LastAcceptedExchange != nil {
 		t.Fatalf("eth last accepted exchange = %v, want nil", response.Symbols[1].LastAcceptedExchange)
@@ -170,19 +202,51 @@ func TestHandlerReturnsNotImplementedForUnsupportedRuntimeStatusProvider(t *test
 }
 
 func TestHandlerRejectsInvalidRuntimeStatusPayload(t *testing.T) {
-	invalid := testRuntimeStatusResponse()
-	invalid.Symbols = append(invalid.Symbols, RuntimeStatusSymbolResponse{Symbol: "SOL-USD"})
-
-	handler, err := NewHandler(runtimeStatusProviderStub{Provider: fixedProvider(t), response: invalid})
-	if err != nil {
-		t.Fatalf("new handler: %v", err)
+	base := testRuntimeStatusResponse()
+	cases := []struct {
+		name   string
+		mutate func(RuntimeStatusResponse) RuntimeStatusResponse
+		want   string
+	}{
+		{
+			name: "missing",
+			mutate: func(response RuntimeStatusResponse) RuntimeStatusResponse {
+				response.Symbols = response.Symbols[:1]
+				return response
+			},
+			want: "missing runtime status symbol: BTC-USD",
+		},
+		{
+			name: "duplicate",
+			mutate: func(response RuntimeStatusResponse) RuntimeStatusResponse {
+				response.Symbols = append(response.Symbols, response.Symbols[1])
+				return response
+			},
+			want: "duplicate runtime status symbol: BTC-USD",
+		},
+		{
+			name: "unsupported",
+			mutate: func(response RuntimeStatusResponse) RuntimeStatusResponse {
+				response.Symbols = append(response.Symbols, RuntimeStatusSymbolResponse{Symbol: "SOL-USD"})
+				return response
+			},
+			want: "unsupported runtime status symbol: SOL-USD",
+		},
 	}
-	server := httptest.NewServer(handler.Routes())
-	t.Cleanup(server.Close)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			handler, err := NewHandler(runtimeStatusProviderStub{Provider: fixedProvider(t), response: tc.mutate(base)})
+			if err != nil {
+				t.Fatalf("new handler: %v", err)
+			}
+			server := httptest.NewServer(handler.Routes())
+			t.Cleanup(server.Close)
 
-	response := decodeJSON[errorResponse](t, httpGet(t, server.URL+"/api/runtime-status", http.StatusInternalServerError))
-	if response.Error != "unsupported runtime status symbol: SOL-USD" {
-		t.Fatalf("error = %q", response.Error)
+			response := decodeJSON[errorResponse](t, httpGet(t, server.URL+"/api/runtime-status", http.StatusInternalServerError))
+			if response.Error != tc.want {
+				t.Fatalf("error = %q, want %q", response.Error, tc.want)
+			}
+		})
 	}
 }
 
@@ -390,7 +454,7 @@ func TestLiveSpotProviderReflectsDepthDegradation(t *testing.T) {
 func TestLiveSpotProviderFallsBackWhenUSDMReaderFails(t *testing.T) {
 	provider := fixedLiveProvider(t, staticUSDMReader{
 		staticSpotReader: staticSpotReader{snapshot: testSpotSnapshot()},
-		usdmErr:         errors.New("usdm unavailable"),
+		usdmErr:          errors.New("usdm unavailable"),
 	})
 	response, err := provider.CurrentSymbolState(context.Background(), "BTC-USD")
 	if err != nil {
@@ -495,6 +559,10 @@ func testRuntimeStatusResponse() RuntimeStatusResponse {
 	btcLastMessage := generatedAt.Add(-1500 * time.Millisecond)
 	btcLastSnapshot := generatedAt.Add(-4 * time.Second)
 	btcLastRecovery := generatedAt.Add(-6 * time.Second)
+	btcLastMarkPrice := generatedAt.Add(-3 * time.Second)
+	btcLastOpenInterest := generatedAt.Add(-5 * time.Second)
+	btcNextOpenInterest := generatedAt.Add(10 * time.Second)
+	btcOpenInterestRateLimitUntil := generatedAt.Add(45 * time.Second)
 
 	return RuntimeStatusResponse{
 		GeneratedAt: generatedAt,
@@ -535,6 +603,16 @@ func testRuntimeStatusResponse() RuntimeStatusResponse {
 					ResyncCount:           1,
 					SequenceGapDetected:   true,
 				}),
+				USDMStatus: &RuntimeStatusUSDMStatusResponse{
+					Websocket:                  NewRuntimeStatusFeedHealthResponse(ingestion.FeedHealthStatus{State: ingestion.FeedHealthDegraded, ConnectionState: ingestion.ConnectionReconnecting, MessageFreshness: ingestion.FreshnessFresh, SnapshotFreshness: ingestion.FreshnessUnknown, ConsecutiveReconnects: 2, ClockState: ingestion.ClockNormal, Reasons: []ingestion.DegradationReason{ingestion.ReasonConnectionNotReady}}),
+					OpenInterest:               NewRuntimeStatusFeedHealthResponse(ingestion.FeedHealthStatus{State: ingestion.FeedHealthDegraded, ConnectionState: ingestion.ConnectionConnected, MessageFreshness: ingestion.FreshnessFresh, SnapshotFreshness: ingestion.FreshnessUnknown, ClockState: ingestion.ClockNormal, Reasons: []ingestion.DegradationReason{ingestion.ReasonRateLimit}}),
+					ConnectionState:            ingestion.ConnectionReconnecting,
+					ConsecutiveReconnects:      2,
+					LastMarkPriceAt:            &btcLastMarkPrice,
+					LastOpenInterestAt:         &btcLastOpenInterest,
+					NextOpenInterestPollAt:     &btcNextOpenInterest,
+					OpenInterestRateLimitUntil: &btcOpenInterestRateLimitUntil,
+				},
 				LastAcceptedExchange: &btcLastAccepted,
 				LastAcceptedRecv:     &btcLastAccepted,
 				LastMessageAt:        &btcLastMessage,

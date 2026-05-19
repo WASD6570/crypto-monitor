@@ -1,0 +1,98 @@
+{
+  "fixtureVersion": "v1",
+  "id": "binance-btc-usdt-happy-native-trade-flow",
+  "family": "events",
+  "category": "happy-trade-flow",
+  "scenarioClass": "happy-path",
+  "venue": "BINANCE",
+  "symbol": "BTC-USD",
+  "sourceSymbol": "BTCUSDT",
+  "quoteCurrency": "USDT",
+  "targetSchema": "market-trade.v1.schema.json",
+  "purpose": "Validate accepted Binance Spot trades can be aggregated into deterministic trade-flow feature inputs with duplicate suppression.",
+  "checks": [
+    "schema-validation",
+    "normalization",
+    "trade-flow-aggregation",
+    "duplicate-suppression"
+  ],
+  "rawMessages": [
+    {
+      "e": "trade",
+      "E": 1772798400180,
+      "s": "BTCUSDT",
+      "t": 1001,
+      "p": "64000.00",
+      "q": "0.50",
+      "T": 1772798400100,
+      "m": false,
+      "M": true,
+      "recvTs": "2026-03-06T12:00:00.180Z"
+    },
+    {
+      "e": "trade",
+      "E": 1772798400280,
+      "s": "BTCUSDT",
+      "t": 1002,
+      "p": "64100.00",
+      "q": "0.25",
+      "T": 1772798400200,
+      "m": true,
+      "M": true,
+      "recvTs": "2026-03-06T12:00:00.280Z"
+    },
+    {
+      "e": "trade",
+      "E": 1772798400180,
+      "s": "BTCUSDT",
+      "t": 1001,
+      "p": "64000.00",
+      "q": "0.50",
+      "T": 1772798400100,
+      "m": false,
+      "M": true,
+      "recvTs": "2026-03-06T12:00:00.180Z"
+    }
+  ],
+  "expectedCanonical": [
+    {
+      "schemaVersion": "v1",
+      "eventType": "market-trade",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTCUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BINANCE",
+      "marketType": "spot",
+      "exchangeTs": "2026-03-06T12:00:00.100Z",
+      "recvTs": "2026-03-06T12:00:00.18Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "trade:1001"
+    },
+    {
+      "schemaVersion": "v1",
+      "eventType": "market-trade",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTCUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BINANCE",
+      "marketType": "spot",
+      "exchangeTs": "2026-03-06T12:00:00.200Z",
+      "recvTs": "2026-03-06T12:00:00.28Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "trade:1002"
+    },
+    {
+      "schemaVersion": "v1",
+      "eventType": "market-trade",
+      "symbol": "BTC-USD",
+      "sourceSymbol": "BTCUSDT",
+      "quoteCurrency": "USDT",
+      "venue": "BINANCE",
+      "marketType": "spot",
+      "exchangeTs": "2026-03-06T12:00:00.100Z",
+      "recvTs": "2026-03-06T12:00:00.18Z",
+      "timestampStatus": "normal",
+      "sourceRecordId": "trade:1001"
+    }
+  ]
+}

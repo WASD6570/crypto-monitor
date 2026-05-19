@@ -40,6 +40,7 @@
 - Use `readiness` first to tell warm-up (`NOT_READY`) from a readable-but-degraded runtime (`READY` with `DEGRADED` or `STALE` feed health).
 - Use `feedHealth.state` and `feedHealth.reasons` for the canonical machine-readable posture.
 - Use `connectionState`, `consecutiveReconnects`, `depthStatus`, and the timestamp fields to confirm reconnect, stale, recovery, or rate-limit posture.
+- Use additive `usdmStatus.websocket` and `usdmStatus.openInterest` to record USD-M derivatives-context health; these fields do not decide Spot `readiness`.
 - `GET /healthz` stays process-health only and must not be used as a runtime freshness gate.
 - `GET /api/market-state/global` and `GET /api/market-state/:symbol` remain consumer read surfaces, not the primary operator runtime-health contract.
 
@@ -61,6 +62,17 @@
       "depthStatus": {
         "state": "rate-limit-blocked",
         "trigger": "sequence-gap"
+      },
+      "usdmStatus": {
+        "websocket": {
+          "state": "STALE",
+          "reasons": ["connection-not-ready", "message-stale"]
+        },
+        "openInterest": {
+          "state": "DEGRADED",
+          "reasons": ["rate-limit"]
+        },
+        "connectionState": "RECONNECTING"
       }
     },
     {

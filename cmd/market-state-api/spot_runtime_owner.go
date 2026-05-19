@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/crypto-market-copilot/alerts/libs/go/features"
 	"github.com/crypto-market-copilot/alerts/libs/go/ingestion"
 	marketstateapi "github.com/crypto-market-copilot/alerts/services/market-state-api"
 	venuebinance "github.com/crypto-market-copilot/alerts/services/venue-binance"
@@ -52,6 +53,7 @@ type spotRuntimeState struct {
 	binding                spotBinding
 	bootstrap              *venuebinance.SpotDepthBootstrapOwner
 	depth                  *venuebinance.SpotDepthRecoveryOwner
+	tradeFlow              *features.SpotTradeFlowProcessor
 	lastObservation        marketstateapi.SpotCurrentStateObservation
 	pendingObservation     marketstateapi.SpotCurrentStateObservation
 	haveObservation        bool
@@ -158,12 +160,17 @@ func newSpotRuntimeState(binding spotBinding, runtime *venuebinance.Runtime, fet
 	if err != nil {
 		return nil, err
 	}
+	tradeFlow, err := features.NewSpotTradeFlowProcessor(features.DefaultSpotTradeFlowConfig())
+	if err != nil {
+		return nil, err
+	}
 	return &spotRuntimeState{
 		runtime:         runtime,
 		fetcher:         fetcher,
 		binding:         binding,
 		bootstrap:       bootstrap,
 		depth:           depth,
+		tradeFlow:       tradeFlow,
 		connectionState: ingestion.ConnectionDisconnected,
 	}, nil
 }
@@ -243,11 +250,13 @@ func (o *binanceSpotRuntimeOwner) Snapshot(ctx context.Context, now time.Time) (
 	}
 
 	observations := make([]marketstateapi.SpotCurrentStateObservation, 0, len(o.order))
+	tradeFlow := make([]features.SpotTradeFlowBucket, 0, len(o.order)*3)
 	for _, symbol := range o.order {
 		state := o.states[symbol]
 		if state == nil {
 			continue
 		}
+		tradeFlow = append(tradeFlow, state.tradeFlowSnapshot()...)
 		observation, ok, err := state.snapshot(now)
 		if err != nil {
 			return marketstateapi.SpotCurrentStateSnapshot{}, err
@@ -256,7 +265,7 @@ func (o *binanceSpotRuntimeOwner) Snapshot(ctx context.Context, now time.Time) (
 			observations = append(observations, observation)
 		}
 	}
-	return marketstateapi.SpotCurrentStateSnapshot{Observations: observations}, nil
+	return marketstateapi.SpotCurrentStateSnapshot{Observations: observations, TradeFlow: tradeFlow}, nil
 }
 
 func (o *binanceSpotRuntimeOwner) run(ctx context.Context, done chan struct{}) {
@@ -436,8 +445,11 @@ func (o *binanceSpotRuntimeOwner) handlePayload(ctx context.Context, payload []b
 	}
 	switch header.EventType {
 	case "trade":
-		_, err = venuebinance.ParseTradeFrame(frame)
-		return err
+		parsed, err := venuebinance.ParseTradeFrame(frame)
+		if err != nil {
+			return err
+		}
+		return state.recordTrade(parsed)
 	case "bookTicker":
 		parsed, err := venuebinance.ParseTopOfBookFrame(frame)
 		if err != nil {
@@ -544,6 +556,87 @@ func (o *binanceSpotRuntimeOwner) depthSubscriptions() []string {
 		params = append(params, strings.ToLower(state.binding.SourceSymbol)+depthStreamSuffix)
 	}
 	return params
+}
+
+func (s *spotRuntimeState) recordTrade(parsed venuebinance.ParsedTrade) error {
+	if s == nil {
+		return fmt.Errorf("spot runtime state is required")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if parsed.SourceSymbol != s.binding.SourceSymbol {
+		return fmt.Errorf("trade source symbol = %q, want %q", parsed.SourceSymbol, s.binding.SourceSymbol)
+	}
+	price, err := strconv.ParseFloat(parsed.Message.Price, 64)
+	if err != nil {
+		return fmt.Errorf("parse trade price: %w", err)
+	}
+	size, err := strconv.ParseFloat(parsed.Message.Size, 64)
+	if err != nil {
+		return fmt.Errorf("parse trade size: %w", err)
+	}
+	recvTs, err := time.Parse(time.RFC3339Nano, parsed.Message.RecvTs)
+	if err != nil {
+		return fmt.Errorf("parse trade recv timestamp: %w", err)
+	}
+	var exchangeTs time.Time
+	if parsed.Message.ExchangeTs != "" {
+		if parsedExchange, parseErr := time.Parse(time.RFC3339Nano, parsed.Message.ExchangeTs); parseErr == nil {
+			exchangeTs = parsedExchange
+		}
+	}
+	canonical, err := ingestion.NormalizeTradeMessage(ingestion.TradeMetadata{
+		Symbol:        s.binding.Symbol,
+		SourceSymbol:  s.binding.SourceSymbol,
+		QuoteCurrency: s.binding.QuoteCurrency,
+		Venue:         ingestion.VenueBinance,
+		MarketType:    features.SpotTradeFlowMarketType,
+	}, parsed.Message, ingestion.StrictTimestampPolicy())
+	if err != nil {
+		return err
+	}
+	health := s.tradeFlowFeedHealthLocked(recvTs)
+	_, err = s.tradeFlow.Observe(features.SpotTradeFlowObservation{
+		Symbol:            canonical.Symbol,
+		Venue:             canonical.Venue,
+		MarketType:        canonical.MarketType,
+		SourceSymbol:      canonical.SourceSymbol,
+		SourceRecordID:    canonical.SourceRecordID,
+		Side:              parsed.Message.Side,
+		Price:             price,
+		Size:              size,
+		ExchangeTs:        exchangeTs,
+		RecvTs:            recvTs,
+		ObservedAt:        recvTs,
+		TimestampStatus:   canonical.TimestampStatus,
+		FeedHealthState:   health.State,
+		FeedHealthReasons: append([]ingestion.DegradationReason(nil), health.Reasons...),
+	})
+	return err
+}
+
+func (s *spotRuntimeState) tradeFlowSnapshot() []features.SpotTradeFlowBucket {
+	if s == nil {
+		return nil
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.tradeFlow == nil {
+		return nil
+	}
+	return s.tradeFlow.Snapshot(s.binding.Symbol)
+}
+
+func (s *spotRuntimeState) tradeFlowFeedHealthLocked(now time.Time) ingestion.FeedHealthStatus {
+	status, err := s.depth.HealthStatus(now.UTC(), s.connectionState, s.localClockOffset, s.consecutiveReconnects)
+	if err == nil && status.State != "" {
+		return status
+	}
+	return ingestion.FeedHealthStatus{
+		State:           ingestion.FeedHealthDegraded,
+		ConnectionState: s.connectionState,
+		Reasons:         []ingestion.DegradationReason{ingestion.ReasonConnectionNotReady},
+	}
 }
 
 func (s *spotRuntimeState) handleDepthFrame(ctx context.Context, frame venuebinance.SpotRawFrame) error {

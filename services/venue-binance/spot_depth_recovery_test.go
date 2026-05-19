@@ -14,12 +14,14 @@ func TestSpotDepthRecoveryOwnerMarksSequenceGapAndBlocksOnCooldown(t *testing.T)
 	if err != nil {
 		t.Fatalf("new recovery owner: %v", err)
 	}
-	if err := owner.StartSynchronized(bootstrapSync(t, 700, 1772798520250, 701, 1772798520300)); err != nil {
+	snapshotRecv := time.UnixMilli(1772798520250).UTC()
+	gapRecv := time.UnixMilli(1772798520600).UTC()
+	if err := owner.StartSynchronized(bootstrapSync(t, 700, snapshotRecv.UnixMilli(), 701, 1772798520300)); err != nil {
 		t.Fatalf("start synchronized: %v", err)
 	}
 
 	if err := owner.MarkSequenceGap(SpotRawFrame{
-		RecvTime: time.UnixMilli(1772798520600).UTC(),
+		RecvTime: gapRecv,
 		Payload:  []byte(`{"e":"depthUpdate","E":1772798520600,"s":"BTCUSDT","U":703,"u":704,"b":[["64020.40","0.95"]],"a":[["64020.70","0.80"]]}`),
 	}); err != nil {
 		t.Fatalf("mark sequence gap: %v", err)
@@ -31,8 +33,9 @@ func TestSpotDepthRecoveryOwnerMarksSequenceGapAndBlocksOnCooldown(t *testing.T)
 	if !status.SequenceGapDetected {
 		t.Fatal("expected sequence gap to remain visible")
 	}
-	if status.RemainingCooldown != 650*time.Millisecond {
-		t.Fatalf("remaining cooldown = %s, want %s", status.RemainingCooldown, 650*time.Millisecond)
+	wantRemaining := runtime.config.SnapshotCooldown - gapRecv.Sub(snapshotRecv)
+	if status.RemainingCooldown != wantRemaining {
+		t.Fatalf("remaining cooldown = %s, want %s", status.RemainingCooldown, wantRemaining)
 	}
 	if status.Synchronized {
 		t.Fatal("did not expect synchronized state after gap")
@@ -131,6 +134,8 @@ func TestSpotDepthRecoveryStatusAtRefreshesRateLimitTimers(t *testing.T) {
 
 func TestSpotDepthRecoveryOwnerRecoversWithReplacementSnapshot(t *testing.T) {
 	runtime := newBinanceRuntime(t)
+	// Recovery mechanics are independent of the prod-like cooldown covered above.
+	runtime.config.SnapshotCooldown = time.Second
 	owner, err := NewSpotDepthRecoveryOwner(runtime, stubSpotDepthSnapshotFetcher{
 		response: SpotDepthSnapshotResponse{
 			RecvTime: time.UnixMilli(1772798521700).UTC(),

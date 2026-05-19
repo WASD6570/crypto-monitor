@@ -120,8 +120,8 @@ func TestSpotWebsocketSupervisorTracksConnectSubscribeReconnectAndRollover(t *te
 	if err != nil {
 		t.Fatalf("handle disconnect: %v", err)
 	}
-	if plan.Delay != 500*time.Millisecond {
-		t.Fatalf("reconnect delay = %s, want %s", plan.Delay, 500*time.Millisecond)
+	if plan.Delay != config.Adapter.ReconnectBackoffMin {
+		t.Fatalf("reconnect delay = %s, want %s", plan.Delay, config.Adapter.ReconnectBackoffMin)
 	}
 	if plan.Cause != SpotReconnectCauseTransport {
 		t.Fatalf("reconnect cause = %q, want %q", plan.Cause, SpotReconnectCauseTransport)
@@ -164,8 +164,8 @@ func TestSpotWebsocketSupervisorTracksConnectSubscribeReconnectAndRollover(t *te
 	if plan.Cause != SpotReconnectCauseRollover {
 		t.Fatalf("reconnect cause = %q, want %q", plan.Cause, SpotReconnectCauseRollover)
 	}
-	if plan.Delay != 500*time.Millisecond {
-		t.Fatalf("rollover delay = %s, want %s", plan.Delay, 500*time.Millisecond)
+	if plan.Delay != config.Adapter.ReconnectBackoffMin {
+		t.Fatalf("rollover delay = %s, want %s", plan.Delay, config.Adapter.ReconnectBackoffMin)
 	}
 }
 

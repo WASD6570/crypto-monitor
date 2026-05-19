@@ -6,7 +6,7 @@
 - The dashboard consumes these routes through the same-origin `/api/market-state/*` path; it does not talk to Binance directly.
 - Warm-up is explicit: symbol and global payloads may be partial or unavailable until the sustained Spot runtime publishes readable observations.
 - During startup, users may briefly see `Current State Unavailable` in `apps/web` and can use `Retry current state` to re-read the same-origin API after warm-up.
-- `GET /api/runtime-status` is the bounded operator-facing runtime-health surface for `BTC-USD` and `ETH-USD`; it exposes `readiness`, canonical feed-health state/reasons, connection posture, reconnect counts, depth-recovery posture, and runtime timestamps.
+- `GET /api/runtime-status` is the bounded operator-facing runtime-health surface for `BTC-USD` and `ETH-USD`; it exposes Spot `readiness`, canonical feed-health state/reasons, connection posture, reconnect counts, depth-recovery posture, runtime timestamps, and additive `usdmStatus` websocket/open-interest health.
 - Use `readiness=NOT_READY` to identify warm-up separately from `readiness=READY` with degraded or stale runtime health.
 - Keeps the first live cutover Spot-driven; `usa` remains explicit rather than synthesized.
 - Surfaces degradation in payloads instead of failing `/healthz`; `/healthz` remains process health only and does not encode market-data freshness.

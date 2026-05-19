@@ -127,6 +127,16 @@ func TestUSDMOpenInterestPollerMarksStaleAndRateLimit(t *testing.T) {
 	if !hasReason(rateLimited.Reasons, ingestion.ReasonRateLimit) {
 		t.Fatalf("reasons = %v, want %q", rateLimited.Reasons, ingestion.ReasonRateLimit)
 	}
+	states := poller.State()
+	if len(states) != 2 || states[0].SourceSymbol != "BTCUSDT" {
+		t.Fatalf("poller states = %+v, want BTCUSDT first", states)
+	}
+	if states[0].RateLimitUntil.IsZero() {
+		t.Fatalf("expected rate-limit timestamp in poller state: %+v", states[0])
+	}
+	if !states[0].NextPollAt.Equal(base.Add(2 * time.Millisecond)) {
+		t.Fatalf("next poll at = %s, want %s", states[0].NextPollAt, base.Add(2*time.Millisecond))
+	}
 
 	stale, err := poller.HealthStatus("BTCUSDT", base.Add(16*time.Second))
 	if err != nil {

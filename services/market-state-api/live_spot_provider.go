@@ -27,6 +27,7 @@ type USDMInfluenceInputReader interface {
 
 type SpotCurrentStateSnapshot struct {
 	Observations []SpotCurrentStateObservation
+	TradeFlow    []features.SpotTradeFlowBucket
 }
 
 type SpotCurrentStateObservation struct {
@@ -48,12 +49,12 @@ type spotLiveCurrentStateSource struct {
 }
 
 type symbolAssemblyState struct {
-	world        features.CompositeSnapshot
-	usa          features.CompositeSnapshot
-	buckets      []features.MarketQualityBucket
-	symbolRegime features.SymbolRegimeSnapshot
+	world         features.CompositeSnapshot
+	usa           features.CompositeSnapshot
+	buckets       []features.MarketQualityBucket
+	symbolRegime  features.SymbolRegimeSnapshot
 	usdmInfluence *features.MarketStateCurrentUSDMInfluenceProvenance
-	hasData      bool
+	hasData       bool
 }
 
 func newSpotLiveCurrentStateSource(reader SpotCurrentStateReader, slowContextReader SlowContextReader) (*spotLiveCurrentStateSource, error) {

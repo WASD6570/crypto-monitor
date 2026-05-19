@@ -14,12 +14,17 @@ func TestRuntimeReconnectDelayUsesCoinbaseConfigBounds(t *testing.T) {
 		t.Fatalf("new runtime: %v", err)
 	}
 
-	delay, err := runtime.ReconnectDelay(4)
+	attempt := 4
+	delay, err := runtime.ReconnectDelay(attempt)
 	if err != nil {
 		t.Fatalf("reconnect delay: %v", err)
 	}
-	if delay != 4*time.Second {
-		t.Fatalf("delay = %s, want %s", delay, 4*time.Second)
+	want := config.Adapter.ReconnectBackoffMin * 8
+	if want > config.Adapter.ReconnectBackoffMax {
+		want = config.Adapter.ReconnectBackoffMax
+	}
+	if delay != want {
+		t.Fatalf("delay = %s, want %s", delay, want)
 	}
 }
 

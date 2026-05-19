@@ -14,12 +14,17 @@ func TestRuntimeReconnectDelayUsesKrakenConfigBounds(t *testing.T) {
 		t.Fatalf("new runtime: %v", err)
 	}
 
-	delay, err := runtime.ReconnectDelay(3)
+	attempt := 3
+	delay, err := runtime.ReconnectDelay(attempt)
 	if err != nil {
 		t.Fatalf("reconnect delay: %v", err)
 	}
-	if delay != 2*time.Second {
-		t.Fatalf("delay = %s, want %s", delay, 2*time.Second)
+	want := config.Adapter.ReconnectBackoffMin * 4
+	if want > config.Adapter.ReconnectBackoffMax {
+		want = config.Adapter.ReconnectBackoffMax
+	}
+	if delay != want {
+		t.Fatalf("delay = %s, want %s", delay, want)
 	}
 }
 

@@ -56,7 +56,25 @@ func (p *providerWithRuntime) RuntimeHealthSnapshot(ctx context.Context, now tim
 	if p == nil || p.owner == nil {
 		return binanceRuntimeHealthSnapshot{}, fmt.Errorf("binance runtime health owner is required")
 	}
-	return p.owner.RuntimeHealthSnapshot(ctx, now)
+	snapshot, err := p.owner.RuntimeHealthSnapshot(ctx, now)
+	if err != nil {
+		return binanceRuntimeHealthSnapshot{}, err
+	}
+	if p.usdmOwner == nil {
+		return snapshot, nil
+	}
+	usdmStatus, err := p.usdmOwner.RuntimeHealthUSDMSnapshot(ctx, now)
+	if err != nil {
+		return binanceRuntimeHealthSnapshot{}, err
+	}
+	for index := range snapshot.Symbols {
+		status, ok := usdmStatus[snapshot.Symbols[index].Symbol]
+		if !ok {
+			return binanceRuntimeHealthSnapshot{}, fmt.Errorf("missing binance usdm runtime status for %s", snapshot.Symbols[index].Symbol)
+		}
+		snapshot.Symbols[index].USDMStatus = &status
+	}
+	return snapshot, nil
 }
 
 func (p *providerWithRuntime) Close(ctx context.Context) error {

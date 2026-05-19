@@ -16,13 +16,18 @@ func TestRuntimeReconnectDelayUsesBinanceConfigBounds(t *testing.T) {
 		t.Fatalf("new runtime: %v", err)
 	}
 
-	delay, err := runtime.ReconnectDelay(4)
+	attempt := 4
+	delay, err := runtime.ReconnectDelay(attempt)
 	if err != nil {
 		t.Fatalf("reconnect delay: %v", err)
 	}
 
-	if delay != 4*time.Second {
-		t.Fatalf("delay = %s, want %s", delay, 4*time.Second)
+	want := config.Adapter.ReconnectBackoffMin * 8
+	if want > config.Adapter.ReconnectBackoffMax {
+		want = config.Adapter.ReconnectBackoffMax
+	}
+	if delay != want {
+		t.Fatalf("delay = %s, want %s", delay, want)
 	}
 }
 
@@ -38,8 +43,8 @@ func TestRuntimeReconnectDelayClampsAtConfiguredMaximum(t *testing.T) {
 		t.Fatalf("reconnect delay: %v", err)
 	}
 
-	if delay != 5*time.Second {
-		t.Fatalf("delay = %s, want %s", delay, 5*time.Second)
+	if delay != config.Adapter.ReconnectBackoffMax {
+		t.Fatalf("delay = %s, want %s", delay, config.Adapter.ReconnectBackoffMax)
 	}
 }
 
@@ -82,8 +87,12 @@ func TestRuntimeSnapshotRecoveryStatusReportsRemainingCooldown(t *testing.T) {
 		t.Fatalf("new runtime: %v", err)
 	}
 
-	now := time.UnixMilli(1772798461500).UTC()
 	lastAttempt := time.UnixMilli(1772798461000).UTC()
+	elapsed := config.SnapshotCooldown / 4
+	if elapsed <= 0 {
+		t.Fatalf("snapshot cooldown = %s, want positive duration", config.SnapshotCooldown)
+	}
+	now := lastAttempt.Add(elapsed)
 	status, err := runtime.SnapshotRecoveryStatus(now, lastAttempt)
 	if err != nil {
 		t.Fatalf("snapshot recovery status: %v", err)
@@ -92,8 +101,9 @@ func TestRuntimeSnapshotRecoveryStatusReportsRemainingCooldown(t *testing.T) {
 	if status.Ready {
 		t.Fatal("expected snapshot recovery cooldown to still be active")
 	}
-	if status.RemainingCooldown != 500*time.Millisecond {
-		t.Fatalf("remaining cooldown = %s, want %s", status.RemainingCooldown, 500*time.Millisecond)
+	wantRemaining := config.SnapshotCooldown - elapsed
+	if status.RemainingCooldown != wantRemaining {
+		t.Fatalf("remaining cooldown = %s, want %s", status.RemainingCooldown, wantRemaining)
 	}
 }
 
@@ -104,8 +114,8 @@ func TestRuntimeSnapshotRecoveryStatusAllowsRetryAfterCooldown(t *testing.T) {
 		t.Fatalf("new runtime: %v", err)
 	}
 
-	now := time.UnixMilli(1772798462000).UTC()
 	lastAttempt := time.UnixMilli(1772798461000).UTC()
+	now := lastAttempt.Add(config.SnapshotCooldown)
 	status, err := runtime.SnapshotRecoveryStatus(now, lastAttempt)
 	if err != nil {
 		t.Fatalf("snapshot recovery status: %v", err)
@@ -426,7 +436,8 @@ func TestRuntimeEvaluateReconnectLoopReturnsNormalBelowThreshold(t *testing.T) {
 		t.Fatalf("new runtime: %v", err)
 	}
 
-	status, err := runtime.EvaluateReconnectLoop(2)
+	count := config.Adapter.ReconnectLoopThreshold - 1
+	status, err := runtime.EvaluateReconnectLoop(count)
 	if err != nil {
 		t.Fatalf("evaluate reconnect loop: %v", err)
 	}
@@ -434,11 +445,12 @@ func TestRuntimeEvaluateReconnectLoopReturnsNormalBelowThreshold(t *testing.T) {
 	if status.LoopDetected {
 		t.Fatal("expected reconnect count below threshold to stay normal")
 	}
-	if status.Threshold != 4 {
-		t.Fatalf("threshold = %d, want %d", status.Threshold, 4)
+	if status.Threshold != config.Adapter.ReconnectLoopThreshold {
+		t.Fatalf("threshold = %d, want %d", status.Threshold, config.Adapter.ReconnectLoopThreshold)
 	}
-	if status.RemainingBeforeLoop != 2 {
-		t.Fatalf("remaining before loop = %d, want %d", status.RemainingBeforeLoop, 2)
+	wantRemaining := config.Adapter.ReconnectLoopThreshold - count
+	if status.RemainingBeforeLoop != wantRemaining {
+		t.Fatalf("remaining before loop = %d, want %d", status.RemainingBeforeLoop, wantRemaining)
 	}
 }
 
@@ -449,7 +461,7 @@ func TestRuntimeEvaluateReconnectLoopDetectsLoopAtThreshold(t *testing.T) {
 		t.Fatalf("new runtime: %v", err)
 	}
 
-	status, err := runtime.EvaluateReconnectLoop(4)
+	status, err := runtime.EvaluateReconnectLoop(config.Adapter.ReconnectLoopThreshold)
 	if err != nil {
 		t.Fatalf("evaluate reconnect loop: %v", err)
 	}
@@ -469,7 +481,7 @@ func TestRuntimeEvaluateReconnectLoopClampsRemainingBelowZero(t *testing.T) {
 		t.Fatalf("new runtime: %v", err)
 	}
 
-	status, err := runtime.EvaluateReconnectLoop(6)
+	status, err := runtime.EvaluateReconnectLoop(config.Adapter.ReconnectLoopThreshold + 2)
 	if err != nil {
 		t.Fatalf("evaluate reconnect loop: %v", err)
 	}
@@ -501,7 +513,8 @@ func TestRuntimeEvaluateResyncLoopReturnsNormalBelowThreshold(t *testing.T) {
 		t.Fatalf("new runtime: %v", err)
 	}
 
-	status, err := runtime.EvaluateResyncLoop(2)
+	count := config.Adapter.ResyncLoopThreshold - 1
+	status, err := runtime.EvaluateResyncLoop(count)
 	if err != nil {
 		t.Fatalf("evaluate resync loop: %v", err)
 	}
@@ -509,11 +522,12 @@ func TestRuntimeEvaluateResyncLoopReturnsNormalBelowThreshold(t *testing.T) {
 	if status.LoopDetected {
 		t.Fatal("expected resync count below threshold to stay normal")
 	}
-	if status.Threshold != 3 {
-		t.Fatalf("threshold = %d, want %d", status.Threshold, 3)
+	if status.Threshold != config.Adapter.ResyncLoopThreshold {
+		t.Fatalf("threshold = %d, want %d", status.Threshold, config.Adapter.ResyncLoopThreshold)
 	}
-	if status.RemainingBeforeLoop != 1 {
-		t.Fatalf("remaining before loop = %d, want %d", status.RemainingBeforeLoop, 1)
+	wantRemaining := config.Adapter.ResyncLoopThreshold - count
+	if status.RemainingBeforeLoop != wantRemaining {
+		t.Fatalf("remaining before loop = %d, want %d", status.RemainingBeforeLoop, wantRemaining)
 	}
 }
 
@@ -524,7 +538,7 @@ func TestRuntimeEvaluateResyncLoopDetectsLoopAtThreshold(t *testing.T) {
 		t.Fatalf("new runtime: %v", err)
 	}
 
-	status, err := runtime.EvaluateResyncLoop(3)
+	status, err := runtime.EvaluateResyncLoop(config.Adapter.ResyncLoopThreshold)
 	if err != nil {
 		t.Fatalf("evaluate resync loop: %v", err)
 	}
@@ -544,7 +558,7 @@ func TestRuntimeEvaluateResyncLoopClampsRemainingBelowZero(t *testing.T) {
 		t.Fatalf("new runtime: %v", err)
 	}
 
-	status, err := runtime.EvaluateResyncLoop(5)
+	status, err := runtime.EvaluateResyncLoop(config.Adapter.ResyncLoopThreshold + 2)
 	if err != nil {
 		t.Fatalf("evaluate resync loop: %v", err)
 	}
@@ -922,6 +936,10 @@ func TestRuntimeAdapterHealthSnapshotComposesDegradedStatuses(t *testing.T) {
 	}
 
 	now := time.UnixMilli(1772798525000).UTC()
+	recoveryElapsed := config.SnapshotCooldown / 4
+	if recoveryElapsed <= 0 {
+		t.Fatalf("snapshot cooldown = %s, want positive duration", config.SnapshotCooldown)
+	}
 	snapshot, err := runtime.AdapterHealthSnapshot(AdapterHealthInput{
 		ConnectionState:        ingestion.ConnectionReconnecting,
 		Now:                    now,
@@ -929,7 +947,7 @@ func TestRuntimeAdapterHealthSnapshotComposesDegradedStatuses(t *testing.T) {
 		LastSnapshotAt:         now.Add(-31 * time.Second),
 		SequenceGapDetected:    true,
 		LocalClockOffset:       250 * time.Millisecond,
-		LastSnapshotRecoveryAt: now.Add(-500 * time.Millisecond),
+		LastSnapshotRecoveryAt: now.Add(-recoveryElapsed),
 		RecentSnapshotRecoveries: []time.Time{
 			now.Add(-50 * time.Second),
 			now.Add(-10 * time.Second),
@@ -962,8 +980,9 @@ func TestRuntimeAdapterHealthSnapshotComposesDegradedStatuses(t *testing.T) {
 	if snapshot.SnapshotRecoveryCooldown.Ready {
 		t.Fatal("expected snapshot cooldown to still be active")
 	}
-	if snapshot.SnapshotRecoveryCooldown.RemainingCooldown != 500*time.Millisecond {
-		t.Fatalf("remaining cooldown = %s, want %s", snapshot.SnapshotRecoveryCooldown.RemainingCooldown, 500*time.Millisecond)
+	wantRemaining := config.SnapshotCooldown - recoveryElapsed
+	if snapshot.SnapshotRecoveryCooldown.RemainingCooldown != wantRemaining {
+		t.Fatalf("remaining cooldown = %s, want %s", snapshot.SnapshotRecoveryCooldown.RemainingCooldown, wantRemaining)
 	}
 	if snapshot.SnapshotRecoveryRateLimit.Allowed {
 		t.Fatal("expected snapshot recovery rate-limit to block attempt")

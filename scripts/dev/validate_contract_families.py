@@ -210,11 +210,12 @@ EXPECTED_FAMILIES = {
             "replay-run-result.v1.schema.json": {
                 "required_fields": [
                     "schemaVersion",
-                    "id",
-                    "seedId",
-                    "symbol",
+                    "runId",
                     "status",
-                    "outputChecksum",
+                    "inputCounters",
+                    "startedAt",
+                    "finishedAt",
+                    "manifestDigest",
                 ]
             },
         }

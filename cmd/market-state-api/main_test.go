@@ -698,6 +698,12 @@ func TestNewProviderWithOptionsServesRuntimeStatusDuringWarmup(t *testing.T) {
 		if symbol.FeedHealth.State == "" {
 			t.Fatalf("%s feed health state should stay explicit", symbol.Symbol)
 		}
+		if symbol.USDMStatus == nil {
+			t.Fatalf("%s usdm status should be present", symbol.Symbol)
+		}
+		if symbol.USDMStatus.Websocket.State == "" || symbol.USDMStatus.OpenInterest.State == "" {
+			t.Fatalf("%s usdm feed-health states should stay explicit: %+v", symbol.Symbol, symbol.USDMStatus)
+		}
 		if symbol.LastAcceptedExchange != nil || symbol.LastAcceptedRecv != nil {
 			t.Fatalf("%s accepted timestamps should be nil: %+v", symbol.Symbol, symbol)
 		}
@@ -826,6 +832,57 @@ func TestNewProviderWithOptionsReflectsDegradedAPIState(t *testing.T) {
 	}
 }
 
+func TestProviderWithRuntimeCloseStopsOwnersIdempotently(t *testing.T) {
+	restServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "unexpected request", http.StatusInternalServerError)
+	}))
+	defer restServer.Close()
+	wsServer := newSpotWebsocketTestServer(t, func(conn *websocket.Conn, command binanceSubscribeCommand) {
+		writeSubscribeAck(t, conn, command.ID)
+		blockUntilSocketClosed(conn)
+	})
+	defer wsServer.Close()
+
+	provider, err := newProviderWithOptions(providerOptions{
+		clock:            func() time.Time { return time.Date(2026, time.March, 10, 12, 0, 0, 0, time.UTC) },
+		client:           restServer.Client(),
+		configPath:       testConfigPath(),
+		binanceURL:       restServer.URL,
+		websocketURL:     websocketURLForServer(wsServer),
+		binanceUSDMURL:   restServer.URL,
+		usdmWebsocketURL: websocketURLForServer(wsServer),
+	})
+	if err != nil {
+		t.Fatalf("new provider: %v", err)
+	}
+	wrapped, ok := provider.(*providerWithRuntime)
+	if !ok {
+		t.Fatalf("provider type = %T, want *providerWithRuntime", provider)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := wrapped.Close(ctx); err != nil {
+		t.Fatalf("first close: %v", err)
+	}
+	if err := wrapped.Close(ctx); err != nil {
+		t.Fatalf("second close: %v", err)
+	}
+	if wrapped.usdmOwner.started || wrapped.owner.started {
+		t.Fatalf("owners should be stopped: spot=%v usdm=%v", wrapped.owner.started, wrapped.usdmOwner.started)
+	}
+
+	health := httptest.NewRecorder()
+	handler, err := marketstateapi.NewHandler(wrapped)
+	if err != nil {
+		t.Fatalf("new handler: %v", err)
+	}
+	handler.Routes().ServeHTTP(health, httptest.NewRequest(http.MethodGet, "/healthz", nil))
+	if health.Code != http.StatusOK {
+		t.Fatalf("health status after close = %d, want %d", health.Code, http.StatusOK)
+	}
+}
+
 func TestNewProviderWithOptionsRejectsMissingWebsocketURL(t *testing.T) {
 	_, err := newProviderWithOptions(providerOptions{
 		clock:      func() time.Time { return time.Now().UTC() },
@@ -900,6 +957,9 @@ func TestNewProviderWithOptionsLoadsBinanceEnvironmentProfiles(t *testing.T) {
 			for _, symbol := range status.Symbols {
 				if symbol.Readiness != marketstateapi.RuntimeStatusNotReady {
 					t.Fatalf("%s readiness = %q, want %q", symbol.Symbol, symbol.Readiness, marketstateapi.RuntimeStatusNotReady)
+				}
+				if symbol.USDMStatus == nil {
+					t.Fatalf("%s usdm status should be present", symbol.Symbol)
 				}
 			}
 		})

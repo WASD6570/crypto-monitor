@@ -177,19 +177,21 @@ func TestIngestionRetrySafetyStaysBounded(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reconnect delay: %v", err)
 	}
-	if delay != 5*time.Second {
-		t.Fatalf("reconnect delay = %s, want %s", delay, 5*time.Second)
+	if delay != config.Adapter.ReconnectBackoffMax {
+		t.Fatalf("reconnect delay = %s, want %s", delay, config.Adapter.ReconnectBackoffMax)
 	}
 
-	cooldown, err := runtime.SnapshotRecoveryStatus(now, now.Add(-500*time.Millisecond))
+	elapsed := 500 * time.Millisecond
+	cooldown, err := runtime.SnapshotRecoveryStatus(now, now.Add(-elapsed))
 	if err != nil {
 		t.Fatalf("snapshot recovery status: %v", err)
 	}
 	if cooldown.Ready {
 		t.Fatal("expected snapshot recovery cooldown to remain active")
 	}
-	if cooldown.RemainingCooldown != 500*time.Millisecond {
-		t.Fatalf("remaining cooldown = %s, want %s", cooldown.RemainingCooldown, 500*time.Millisecond)
+	wantRemaining := config.SnapshotCooldown - elapsed
+	if cooldown.RemainingCooldown != wantRemaining {
+		t.Fatalf("remaining cooldown = %s, want %s", cooldown.RemainingCooldown, wantRemaining)
 	}
 
 	rateLimit, err := runtime.SnapshotRecoveryRateLimitStatus(now, []time.Time{

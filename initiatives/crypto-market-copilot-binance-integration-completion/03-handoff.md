@@ -2,21 +2,22 @@
 
 ## Refined Epic Queue
 
-- `plans/epics/binance-environment-config-and-rollout-hardening/` has a new bounded child ready for implementation: `plans/binance-live-reload-dev-workflow/`.
+- `plans/epics/binance-market-intelligence-gap-closure/` has active child plan `plans/binance-spot-depth-liquidity-indicators/` ready to implement and supersedes the narrower `binance-long-run-runtime-hardening` seed.
+- `plans/epics/binance-environment-config-and-rollout-hardening/` still has the dev-only live-reload workflow implementation evidence, but its active plan directory needs reconciliation before archive testing can be driven from `plans/binance-live-reload-dev-workflow/`.
 
 ## Execution State
 
 - Initiative status: `in_progress`
 - Completed prerequisite epic context: `plans/epics/binance-streaming-market-state-runtime-integration/` (historical reference only)
-- Next recommended execution step: run `feature-testing` for `plans/binance-live-reload-dev-workflow/`
-- Parallel-safe step after that starts: `binance-long-run-runtime-hardening` can still move through `program-refining`
+- Next recommended execution step: run `feature-implementing` for `plans/binance-spot-depth-liquidity-indicators/`
+- Parallel-safe steps: plan `binance-usdm-derivatives-indicator-enrichment` only if explicitly prioritized; restore or recreate the dev-only live-reload testing matrix if archive testing remains desired
 
 | Item | Status | Depends On | Parallel With | Next Action | Notes |
 |---|---|---|---|---|---|
 | `plans/epics/binance-runtime-health-and-operator-observability/` | `archived` | `plans/completed/binance-runtime-health-snapshot-owner/` | - | Use archived child evidence as the settled operator runtime-health surface | The runtime-status endpoint and ops-handoff child is complete and archived |
 | `plans/epics/binance-usdm-market-state-influence/` | `archived` | Wave 1 complete and `plans/epics/binance-usdm-context-sensors/` | - | Use archived USD-M child evidence as the settled market-state semantics reference | Both child plans are complete and archived |
-| `plans/epics/binance-environment-config-and-rollout-hardening/` | `in_progress` | Wave 2 decisions are now settled | `binance-long-run-runtime-hardening` | Run `feature-testing` for `plans/binance-live-reload-dev-workflow/` | Checked-in configs stay prod-like everywhere, the rollout/startup child is archived, and the bounded dev-only live-reload follow-up is now implemented and reviewed |
-| `binance-long-run-runtime-hardening` | `ready_to_refine` | Wave 2 and Wave 3 outcomes archived | `plans/epics/binance-environment-config-and-rollout-hardening/` | Run `program-refining` when planning capacity exists | Wave 4 seed is still unblocked |
+| `plans/epics/binance-environment-config-and-rollout-hardening/` | `blocked` | Wave 2 decisions are now settled | `plans/epics/binance-market-intelligence-gap-closure/` | Restore/recreate `plans/binance-live-reload-dev-workflow/` before archive testing | Checked-in configs stay prod-like everywhere and the rollout/startup child is archived; dev-only live-reload implementation evidence exists, but the active plan directory is absent |
+| `plans/epics/binance-market-intelligence-gap-closure/` | `in_progress` | Wave 2 and Wave 3 outcomes archived | `plans/epics/binance-environment-config-and-rollout-hardening/` | Run `feature-implementing` for `plans/binance-spot-depth-liquidity-indicators/` | Depth-liquidity plan is ready to implement while alerting remains out of scope |
 
 ## Planning Waves
 
@@ -38,8 +39,8 @@
 
 ### Wave 4
 
-- `binance-long-run-runtime-hardening`
-- Why later: long-run/failure hardening should validate the final runtime shape after the streaming cutover, observability surface, USD-M semantics, and environment defaults are all clear.
+- `binance-market-intelligence-gap-closure`
+- Why later: full Binance market-intelligence closure should validate the final runtime shape after the streaming cutover, observability surface, USD-M semantics, and environment defaults are all clear, then add the missing Spot liquidity, trade-flow, and derivatives indicator layers before alerting work starts.
 
 ## Refined Epics
 
@@ -49,14 +50,14 @@
 - In scope: checked-in `local`/`dev`/`prod` config parity with prod-like behavior everywhere, existing override guardrails in `cmd/market-state-api`, and compose plus runbook rollout handoff
 - Out of scope: runtime-health surface redesign, USD-M semantics redesign, infrastructure-specific deployment tooling, or long-run soak validation
 - Child queue:
-  - active: `plans/binance-live-reload-dev-workflow/`
+  - blocked reconciliation: `plans/binance-live-reload-dev-workflow/`
 - Archived child evidence:
   - `plans/completed/binance-runtime-config-profile-parity/`
   - `plans/completed/binance-rollout-compose-and-ops-handoff/`
-- Active child plan: `plans/binance-live-reload-dev-workflow/`
-- Next recommended action: run `feature-testing` for the dev-only live-reload workflow without changing the default prod-like Compose path
-- Parallel work inside the epic: none after the active child starts; the only remaining work inside this epic is the active dev-workflow child
-- Next child to plan: none beyond the active child
+- Active child plan: none in the current worktree; `plans/binance-live-reload-dev-workflow/` is referenced but absent
+- Next recommended action: restore/recreate the dev-only live-reload testing matrix only if archive testing remains desired; otherwise continue with `plans/epics/binance-market-intelligence-gap-closure/`
+- Parallel work inside the epic: none; the only remaining work inside this epic is reconciling the missing dev-workflow plan/testing artifact
+- Next child to plan: none inside this epic
 - Artifact pointers:
   - `plans/epics/binance-environment-config-and-rollout-hardening/00-overview.md`
   - `plans/epics/binance-environment-config-and-rollout-hardening/90-refinement-map.md`
@@ -125,13 +126,22 @@
 
 ### `binance-long-run-runtime-hardening`
 
-- Problem statement: finishing the integration requires confidence that the final runtime survives reconnects, stale periods, and repeated validation without semantic drift.
-- In scope: long-run/failure-path checks, reconnect/rate-limit/staleness validation, and final replay/current-state regression coverage for the settled runtime.
-- Out of scope: standalone smoke-only planning or unrelated observability platform work.
-- Target repo areas: `tests/integration`, `tests/replay`, `services/venue-binance`, `services/market-state-api`
-- Contract/fixture/parity/replay implications: this is the final confidence gate for runtime determinism and operator trust.
-- Likely validation shape: repeated runtime tests, replay checks, focused live-path failure simulations, and post-cutover compose verification.
+- Superseded by `plans/epics/binance-market-intelligence-gap-closure/`.
+- The original long-run/failure-path confidence gate is retained as the child seed `binance-live-runtime-soak-and-failure-hardening` inside the broader epic.
+
+### `plans/epics/binance-market-intelligence-gap-closure/`
+
+- Problem statement: finishing Binance integration now requires both runtime confidence and richer market-intelligence indicators; the current stack has live Spot best bid/ask and conservative USD-M caps, but not yet trade-flow, real liquidity scoring, derivatives indicator enrichment, or a green full validation baseline.
+- In scope: validation baseline reconciliation, long-run/failure-path hardening, Spot trade-flow feature inputs, Spot depth liquidity indicators, USD-M derivatives indicator enrichment, and additive service-owned indicator readiness surfaces.
+- Out of scope: private Binance endpoints, order submission, account state, non-Binance expansion, browser-side venue logic, or Python live-runtime dependencies.
+- Target repo areas: `services/venue-binance`, `cmd/market-state-api`, `services/market-state-api`, `services/feature-engine`, `libs/go/features`, `libs/go/ingestion`, `schemas/json/features`, `tests/integration`, `tests/replay`, `tests/fixtures`, `apps/web` only after service-owned contracts settle.
+- Contract/fixture/parity/replay implications: enriched indicators must stay additive, deterministic, replayable, and backed by fixture/integration evidence before alerting consumes them.
+- Last archived child plan: `plans/completed/binance-spot-trade-flow-feature-inputs/`.
+- Active child plan: `plans/binance-spot-depth-liquidity-indicators/` (`ready_to_implement`).
+- Next child to implement: `plans/binance-spot-depth-liquidity-indicators/`.
+- Next child to plan, only if explicitly prioritized for parallel planning: `binance-usdm-derivatives-indicator-enrichment`.
 
 ## Open Questions That Still Matter
 
-- How much of long-run hardening belongs in CI versus a documented manual/operator validation flow?
+- Which optional live or Compose runtime checks should be rerun on a Docker-capable host now that the required deterministic local runtime-hardening matrix is archived?
+- Which enriched Binance indicators should be first-class current-state fields versus internal alert-readiness inputs?
